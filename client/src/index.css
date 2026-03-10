@@ -1,0 +1,64 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  background: #1e1e2e;
+  color: #cdd6f4;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #11111b;
+}
+::-webkit-scrollbar-thumb {
+  background: #313244;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #45475a;
+}
+
+/* xterm overrides */
+.xterm {
+  padding: 8px;
+}
+.xterm-viewport::-webkit-scrollbar {
+  width: 8px;
+}
+.xterm-viewport::-webkit-scrollbar-thumb {
+  background: #313244;
+  border-radius: 4px;
+}
+
+/* Panel resize handles */
+[data-panel-group-direction="horizontal"] > [data-resize-handle] {
+  width: 4px;
+  background: #313244;
+  transition: background 0.15s;
+}
+[data-panel-group-direction="horizontal"] > [data-resize-handle]:hover {
+  background: #89b4fa;
+}
+[data-panel-group-direction="vertical"] > [data-resize-handle] {
+  height: 4px;
+  background: #313244;
+  transition: background 0.15s;
+}
+[data-panel-group-direction="vertical"] > [data-resize-handle]:hover {
+  background: #89b4fa;
+}

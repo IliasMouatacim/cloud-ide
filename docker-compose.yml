@@ -1,0 +1,84 @@
+version: '3.8'
+
+services:
+  # ── Main IDE Application ──
+  app:
+    build: .
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      - JWT_SECRET=${JWT_SECRET:-change-me-in-production}
+      - REDIS_URL=redis://redis:6379
+      - DATABASE_URL=postgresql://ide:ide_password@postgres:5432/cloud_ide
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - ide-network
+
+  # ── Redis (job queue & caching) ──
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+    networks:
+      - ide-network
+
+  # ── PostgreSQL (project & user data) ──
+  postgres:
+    image: postgres:16-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: cloud_ide
+      POSTGRES_USER: ide
+      POSTGRES_PASSWORD: ide_password
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./infrastructure/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ide -d cloud_ide"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - ide-network
+
+  # ── Code Execution Sandbox (isolated containers) ──
+  sandbox:
+    build:
+      context: ./infrastructure/sandbox
+      dockerfile: Dockerfile
+    environment:
+      - MAX_EXECUTION_TIME=30
+      - MAX_MEMORY_MB=256
+    restart: unless-stopped
+    networks:
+      - ide-network
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+
+volumes:
+  redis-data:
+  postgres-data:
+
+networks:
+  ide-network:
+    driver: bridge
