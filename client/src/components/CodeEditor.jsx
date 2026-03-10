@@ -39,7 +39,7 @@ function getLanguage(filePath) {
   return LANGUAGE_MAP[ext] || 'plaintext';
 }
 
-export default function CodeEditor({ file, content, onChange, onSave }) {
+export default function CodeEditor({ file, content, onChange, onSave, onCursorChange }) {
   const editorRef = useRef(null);
 
   const handleMount = useCallback((editor, monaco) => {
@@ -94,8 +94,13 @@ export default function CodeEditor({ file, content, onChange, onSave }) {
       onSave?.();
     });
 
+    // Track cursor position
+    editor.onDidChangeCursorPosition((e) => {
+      onCursorChange?.({ line: e.position.lineNumber, col: e.position.column });
+    });
+
     editor.focus();
-  }, [onSave]);
+  }, [onSave, onCursorChange]);
 
   const handleChange = useCallback((value) => {
     onChange?.(value || '');

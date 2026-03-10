@@ -30,6 +30,14 @@ const FILE_ICON_MAP = {
 
 const DEFAULT_FILE_ICON = { c: '#6c7086', d: 'M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8zM14 2v6h6' };
 
+const MOCK_EXTENSIONS = [
+  { name: 'Prettier', desc: 'Code formatter', author: 'Prettier', color: '#56b6c2', icon: 'M4 4h16v16H4zM8 8h8M8 12h5M8 16h8', installed: true },
+  { name: 'ESLint', desc: 'JavaScript linter', author: 'Microsoft', color: '#8080f2', icon: 'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z', installed: true },
+  { name: 'GitLens', desc: 'Git supercharged', author: 'GitKraken', color: '#a6e3a1', icon: 'M18 18a3 3 0 100-6 3 3 0 006 0zM6 6a3 3 0 100 6 3 3 0 000-6zM13 6h3a2 2 0 012 2v7M6 9v12', installed: false },
+  { name: 'Tailwind CSS IntelliSense', desc: 'Tailwind autocomplete', author: 'Tailwind Labs', color: '#38bdf8', icon: 'M12 2C6.5 2 6 4.5 6 4.5V8h6v1H5s-3-.5-3 4 2.5 4 2.5 4H7v-3s-.2-2.5 2.5-2.5h5s2.3.1 2.3-2.3V4.5S17.5 2 12 2z', installed: false },
+  { name: 'Material Icon Theme', desc: 'File icons', author: 'Philipp Kief', color: '#f9e2af', icon: 'M5 3h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2zM8.5 10a1.5 1.5 0 100-3 1.5 1.5 0 000 3zM21 15l-5-5L5 21', installed: false },
+];
+
 function FileIcon({ name }) {
   const ext = name.split('.').pop().toLowerCase();
   const icon = FILE_ICON_MAP[ext] || DEFAULT_FILE_ICON;
@@ -74,6 +82,12 @@ export default function Sidebar({
   };
 
   if (section === 'search') {
+    const searchResults = searchQuery ? Object.entries(files)
+      .filter(([path, content]) =>
+        path.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        content.toLowerCase().includes(searchQuery.toLowerCase())
+      ) : [];
+
     return (
       <div className="h-full bg-ide-sidebar flex flex-col">
         <div className="p-3 text-[11px] font-semibold text-ide-textMuted uppercase tracking-widest">Search</div>
@@ -88,16 +102,22 @@ export default function Sidebar({
               placeholder="Search in files..."
               className="w-full pl-7 pr-2 py-1.5 text-xs bg-ide-bg border border-ide-border rounded-md
                          text-ide-text placeholder-ide-textSubtle focus:outline-none focus:border-ide-accent transition-colors"
+              autoFocus
             />
           </div>
+          {searchQuery && (
+            <div className="text-[10px] text-ide-textSubtle mt-1.5 px-0.5">
+              {searchResults.length} result{searchResults.length !== 1 ? 's' : ''} found
+            </div>
+          )}
         </div>
         <div className="flex-1 overflow-y-auto px-2">
-          {searchQuery && Object.entries(files)
-            .filter(([path, content]) =>
-              path.toLowerCase().includes(searchQuery.toLowerCase()) ||
-              content.toLowerCase().includes(searchQuery.toLowerCase())
-            )
-            .map(([path]) => (
+          {searchQuery && searchResults.length === 0 && (
+            <div className="text-xs text-ide-textMuted text-center py-6">
+              No results for "{searchQuery}"
+            </div>
+          )}
+          {searchResults.map(([path]) => (
               <button
                 key={path}
                 onClick={() => onFileSelect(path)}
@@ -108,6 +128,50 @@ export default function Sidebar({
               </button>
             ))
           }
+        </div>
+      </div>
+    );
+  }
+
+  if (section === 'extensions') {
+    return (
+      <div className="h-full bg-ide-sidebar flex flex-col">
+        <div className="p-3 text-[11px] font-semibold text-ide-textMuted uppercase tracking-widest">Extensions</div>
+        <div className="px-3 pb-2">
+          <div className="relative">
+            <Ico d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" size={13}
+                 className="absolute left-2 top-1/2 -translate-y-1/2 text-ide-textMuted" />
+            <input
+              type="text"
+              placeholder="Search extensions..."
+              className="w-full pl-7 pr-2 py-1.5 text-xs bg-ide-bg border border-ide-border rounded-md
+                         text-ide-text placeholder-ide-textSubtle focus:outline-none focus:border-ide-accent transition-colors"
+              disabled
+            />
+          </div>
+        </div>
+        <div className="flex-1 overflow-y-auto px-2 space-y-1">
+          {MOCK_EXTENSIONS.map(ext => (
+            <div key={ext.name} className="flex items-start gap-2.5 p-2 rounded-lg hover:bg-ide-bg/40 transition-colors">
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+                   style={{ backgroundColor: ext.color + '20' }}>
+                <Ico d={ext.icon} size={16} color={ext.color} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="text-xs font-medium text-ide-text truncate">{ext.name}</div>
+                <div className="text-[10px] text-ide-textMuted truncate">{ext.desc}</div>
+                <div className="text-[10px] text-ide-textSubtle mt-0.5">{ext.author}</div>
+              </div>
+              <span className="text-[9px] px-1.5 py-[1px] bg-ide-accent/15 text-ide-accent rounded font-medium shrink-0">
+                {ext.installed ? 'Installed' : 'Install'}
+              </span>
+            </div>
+          ))}
+        </div>
+        <div className="p-3 border-t border-ide-border">
+          <p className="text-[10px] text-ide-textSubtle text-center">
+            Extension marketplace coming soon
+          </p>
         </div>
       </div>
     );

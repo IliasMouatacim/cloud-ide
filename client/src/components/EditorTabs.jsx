@@ -58,6 +58,9 @@ export default function EditorTabs({ openFiles, activeFile, onTabSelect, onTabCl
             <button
               onClick={(e) => {
                 e.stopPropagation();
+                if (isModified) {
+                  if (!window.confirm(`"${name}" has unsaved changes. Close anyway?`)) return;
+                }
                 onTabClose(file);
               }}
               className="ml-1 opacity-0 group-hover:opacity-100 text-ide-textMuted hover:text-ide-error

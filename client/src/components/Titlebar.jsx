@@ -25,7 +25,7 @@ const icons = {
 export default function Titlebar({
   user, onLogin, onLogout, onTogglePreview, onToggleTerminal, onRun,
   showPreview, showTerminal, projectName, onProjectNameChange,
-  onOpenFile, onOpenFolder, onSave
+  onOpenFile, onOpenFolder, onSave, onDownload, onToggleSearch
 }) {
   return (
     <div className="h-11 bg-ide-sidebar flex items-center px-3 border-b border-ide-border select-none shrink-0">
@@ -41,11 +41,28 @@ export default function Titlebar({
 
       {/* Menu items */}
       <div className="flex items-center gap-0.5 text-xs text-ide-textMuted">
-        <FileMenu onOpenFile={onOpenFile} onOpenFolder={onOpenFolder} onSave={onSave} />
-        <MenuButton label="Edit" />
-        <MenuButton label="View" />
-        <MenuButton label="Run" />
-        <MenuButton label="Help" />
+        <FileMenu onOpenFile={onOpenFile} onOpenFolder={onOpenFolder} onSave={onSave} onDownload={onDownload} />
+        <DropdownMenu label="Edit" items={[
+          { label: 'Undo', shortcut: 'Ctrl+Z', action: () => document.execCommand('undo') },
+          { label: 'Redo', shortcut: 'Ctrl+Y', action: () => document.execCommand('redo') },
+          { type: 'separator' },
+          { label: 'Find', shortcut: 'Ctrl+F', action: () => document.querySelector('.monaco-editor textarea')?.dispatchEvent(new KeyboardEvent('keydown', { key: 'f', ctrlKey: true })) },
+          { label: 'Search in Files', shortcut: 'Ctrl+Shift+F', action: onToggleSearch },
+        ]} />
+        <DropdownMenu label="View" items={[
+          { label: showPreview ? 'Hide Preview' : 'Show Preview', action: onTogglePreview },
+          { label: showTerminal ? 'Hide Terminal' : 'Show Terminal', shortcut: 'Ctrl+`', action: onToggleTerminal },
+          { type: 'separator' },
+          { label: 'Quick Open', shortcut: 'Ctrl+P', action: () => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'p', ctrlKey: true })) },
+        ]} />
+        <DropdownMenu label="Run" items={[
+          { label: 'Run Code', shortcut: 'Ctrl+Enter', action: onRun },
+        ]} />
+        <DropdownMenu label="Help" items={[
+          { label: 'Keyboard Shortcuts', action: () => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'p', ctrlKey: true })) },
+          { type: 'separator' },
+          { label: 'About Cloud IDE', action: () => {} },
+        ]} />
       </div>
 
       {/* Project name — centered */}
@@ -119,7 +136,7 @@ export default function Titlebar({
 }
 
 /* ── File menu with dropdown ──────────────────────────────────────── */
-function FileMenu({ onOpenFile, onOpenFolder, onSave }) {
+function FileMenu({ onOpenFile, onOpenFolder, onSave, onDownload }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
 
@@ -137,7 +154,7 @@ function FileMenu({ onOpenFile, onOpenFolder, onSave }) {
     { label: 'Open Folder…', icon: icons.folder, shortcut: 'Ctrl+Shift+O', action: onOpenFolder },
     { type: 'separator' },
     { label: 'Save', icon: icons.save, shortcut: 'Ctrl+S', action: onSave },
-    { label: 'Download Project', icon: icons.download, shortcut: '', action: null },
+    { label: 'Download Project', icon: icons.download, shortcut: '', action: onDownload },
   ];
 
   return (
@@ -179,11 +196,54 @@ function FileMenu({ onOpenFile, onOpenFolder, onSave }) {
   );
 }
 
-function MenuButton({ label }) {
+function DropdownMenu({ label, items }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [open]);
+
   return (
-    <button className="px-2.5 py-1 rounded-md text-xs font-medium hover:bg-ide-bg/40 hover:text-ide-text transition-colors">
-      {label}
-    </button>
+    <div className="relative" ref={ref}>
+      <button
+        onClick={() => setOpen(o => !o)}
+        className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors
+          ${open ? 'bg-ide-bg/60 text-ide-text' : 'hover:bg-ide-bg/40 hover:text-ide-text'}`}
+      >
+        {label}
+      </button>
+      {open && (
+        <div className="absolute left-0 top-full mt-0.5 w-52 bg-ide-panel border border-ide-border rounded-lg
+                        shadow-float z-50 py-1 animate-fadeIn">
+          {items.map((item, i) =>
+            item.type === 'separator' ? (
+              <div key={i} className="h-px bg-ide-border my-1 mx-2" />
+            ) : (
+              <button
+                key={item.label}
+                onClick={() => {
+                  setOpen(false);
+                  item.action?.();
+                }}
+                className="w-full flex items-center gap-2.5 px-3 py-1.5 text-xs text-ide-text
+                           hover:bg-ide-accent/10 hover:text-ide-accent transition-colors"
+              >
+                <span className="flex-1 text-left">{item.label}</span>
+                {item.shortcut && (
+                  <span className="text-[10px] text-ide-textSubtle font-mono">{item.shortcut}</span>
+                )}
+              </button>
+            )
+          )}
+        </div>
+      )}
+    </div>
   );
 }
 

@@ -80,6 +80,8 @@ export default function LivePreview({ files }) {
 
   useEffect(() => {
     const handleMessage = (event) => {
+      // Only accept messages from blob: origins (our own preview iframe)
+      if (event.origin !== 'null' && event.origin !== window.location.origin && !event.origin.startsWith('blob:')) return;
       const data = event.data;
       if (data?.type === 'preview-error') {
         setError(`Line ${data.line || '?'}: ${data.message}`);

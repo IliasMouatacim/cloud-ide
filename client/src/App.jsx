@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { PanelGroup, Panel, PanelResizeHandle } from 'react-resizable-panels';
 import Sidebar from './components/Sidebar';
 import EditorTabs from './components/EditorTabs';
@@ -10,6 +10,8 @@ import AuthModal from './components/AuthModal';
 import GitPanel from './components/GitPanel';
 import StatusBar from './components/StatusBar';
 import WelcomeTab from './components/WelcomeTab';
+import QuickOpen from './components/QuickOpen';
+import ErrorBoundary from './components/ErrorBoundary';
 import { useFileSystem } from './hooks/useFileSystem';
 import { useAuth } from './hooks/useAuth';
 
@@ -20,6 +22,8 @@ export default function App() {
   const [showTerminal, setShowTerminal] = useState(true);
   const [showGit, setShowGit] = useState(false);
   const [sidebarSection, setSidebarSection] = useState('files'); // files | search | git | extensions
+  const [showQuickOpen, setShowQuickOpen] = useState(false);
+  const [isDragOver, setIsDragOver] = useState(false);
 
   const handleRunCode = useCallback(() => {
     setShowPreview(true);
@@ -127,8 +131,156 @@ export default function App() {
     if (fs.activeFile) fs.saveFile(fs.activeFile);
   }, [fs]);
 
+  /* ── Download project as ZIP ────────────────────────────────────── */
+  const handleDownloadProject = useCallback(async () => {
+    // Build a simple ZIP manually (no library needed for basic files)
+    // Use a lightweight approach: create a blob of all files as a self-extracting bundle
+    const entries = Object.entries(fs.files);
+    if (entries.length === 0) return;
+
+    // Create a simple tar-like bundle approach, or just download files individually
+    // For best UX, create a zip-like structure using compression streams if available
+    try {
+      // Try using JSZip-like approach with Blob
+      const { default: JSZip } = await import('https://cdn.jsdelivr.net/npm/jszip@3.10.1/+esm').catch(() => ({ default: null }));
+      
+      if (JSZip) {
+        const zip = new JSZip();
+        for (const [path, content] of entries) {
+          zip.file(path, content);
+        }
+        const blob = await zip.generateAsync({ type: 'blob' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${fs.projectName || 'project'}.zip`;
+        a.click();
+        URL.revokeObjectURL(url);
+      } else {
+        throw new Error('fallback');
+      }
+    } catch {
+      // Fallback: download as a single HTML file with all content embedded
+      let content = '';
+      for (const [path, text] of entries) {
+        content += `===== ${path} =====\n${text}\n\n`;
+      }
+      const blob = new Blob([content], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${fs.projectName || 'project'}.txt`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+  }, [fs.files, fs.projectName]);
+
+  /* ── Global keyboard shortcuts ──────────────────────────────────── */
+  useEffect(() => {
+    const handler = (e) => {
+      const ctrl = e.ctrlKey || e.metaKey;
+
+      // Ctrl+P — Quick Open
+      if (ctrl && e.key === 'p') {
+        e.preventDefault();
+        setShowQuickOpen(prev => !prev);
+      }
+      // Ctrl+` — Toggle Terminal
+      if (ctrl && e.key === '`') {
+        e.preventDefault();
+        setShowTerminal(prev => !prev);
+      }
+      // Ctrl+Enter — Run Code
+      if (ctrl && e.key === 'Enter') {
+        e.preventDefault();
+        handleRunCode();
+      }
+      // Ctrl+Shift+F — Focus Search
+      if (ctrl && e.shiftKey && e.key === 'F') {
+        e.preventDefault();
+        setSidebarSection('search');
+      }
+      // Ctrl+O — Open File
+      if (ctrl && !e.shiftKey && e.key === 'o') {
+        e.preventDefault();
+        handleOpenFile();
+      }
+      // Ctrl+Shift+O — Open Folder
+      if (ctrl && e.shiftKey && e.key === 'O') {
+        e.preventDefault();
+        handleOpenFolder();
+      }
+      // Ctrl+B — Toggle Sidebar (bonus)
+      if (ctrl && e.key === 'b') {
+        e.preventDefault();
+        setSidebarSection(prev => prev ? prev : 'files');
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [handleOpenFile, handleOpenFolder, handleRunCode]);
+
+  /* ── Drag & drop files ──────────────────────────────────────────── */
+  const handleDragOver = useCallback((e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+  }, []);
+
+  const handleDrop = useCallback(async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+
+    const items = e.dataTransfer.items;
+    const newFiles = {};
+
+    for (const item of items) {
+      if (item.kind === 'file') {
+        const file = item.getAsFile();
+        if (file && file.size <= 1_048_576) {
+          const text = await file.text();
+          newFiles[file.name] = text;
+        }
+      }
+    }
+
+    if (Object.keys(newFiles).length > 0) {
+      fs.loadFiles(newFiles);
+    }
+  }, [fs]);
+
   return (
-    <div className="h-full flex flex-col bg-ide-bg">
+    <div
+      className={`h-full flex flex-col bg-ide-bg ${isDragOver ? 'ring-2 ring-inset ring-ide-accent/50' : ''}`}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
+      {/* Drag overlay */}
+      {isDragOver && (
+        <div className="fixed inset-0 z-50 bg-ide-accent/10 flex items-center justify-center pointer-events-none">
+          <div className="bg-ide-panel border-2 border-dashed border-ide-accent rounded-2xl p-8 shadow-float animate-fadeIn">
+            <p className="text-ide-accent text-sm font-medium">Drop files to open</p>
+          </div>
+        </div>
+      )}
+
+      {/* Quick Open dialog */}
+      {showQuickOpen && (
+        <QuickOpen
+          files={fs.files}
+          onSelect={(path) => { fs.openFile(path); setShowQuickOpen(false); }}
+          onClose={() => setShowQuickOpen(false)}
+        />
+      )}
+
       {/* Titlebar */}
       <Titlebar
         user={user}
@@ -144,9 +296,12 @@ export default function App() {
         onOpenFile={handleOpenFile}
         onOpenFolder={handleOpenFolder}
         onSave={handleSave}
+        onDownload={handleDownloadProject}
+        onToggleSearch={() => setSidebarSection('search')}
       />
 
       {/* Main content */}
+      <ErrorBoundary>
       <div className="flex-1 flex overflow-hidden">
         {/* Activity Bar */}
         <ActivityBar
@@ -189,6 +344,7 @@ export default function App() {
                       content={fs.getFileContent(fs.activeFile)}
                       onChange={(content) => fs.updateFile(fs.activeFile, content)}
                       onSave={() => fs.saveFile(fs.activeFile)}
+                      onCursorChange={fs.setCursorPosition}
                     />
                   ) : (
                     <WelcomeTab onNewProject={fs.loadTemplate} />
@@ -225,6 +381,7 @@ export default function App() {
           />
         )}
       </div>
+      </ErrorBoundary>
 
       {/* Status Bar */}
       <StatusBar
