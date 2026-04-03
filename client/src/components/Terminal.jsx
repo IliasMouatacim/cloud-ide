@@ -64,21 +64,8 @@ export default function Terminal() {
 
     xtermRef.current = term;
 
-    // On serverless hosts (Vercel, Netlify) there's no WebSocket server,
-    // so skip the connection attempt and go straight to local mode.
-    const isServerless = window.location.hostname.includes('vercel.app')
-      || window.location.hostname.includes('netlify.app')
-      || !window.location.hostname.includes('localhost');
-
-    if (isServerless) {
-      term.writeln('\x1b[1;34m☁ Cloud IDE Terminal\x1b[0m');
-      term.writeln('\x1b[90mBrowser-based shell • Type "help" for commands\x1b[0m');
-      term.writeln('');
-      localRunnerRef.current = enableLocalMode(term);
-      return;
-    }
-
-    // Connect to WebSocket (local dev / self-hosted server)
+    // Always try real WebSocket terminal first.
+    // If unavailable in the current deployment, we fallback to local simulation.
     let wsUrl = '';
     if (import.meta.env.VITE_API_URL) {
       // Convert http:// to ws:// and https:// to wss://
@@ -116,7 +103,7 @@ export default function Terminal() {
       ws.onerror = () => {
         if (!connected) {
           term.writeln('\x1b[1;34m☁ Cloud IDE Terminal\x1b[0m');
-          term.writeln('\x1b[90mBrowser-based shell • Type "help" for commands\x1b[0m');
+          term.writeln('\x1b[90mReal terminal unavailable in this deployment. Using local simulation.\x1b[0m');
           term.writeln('');
           localRunnerRef.current = enableLocalMode(term);
         }
@@ -145,7 +132,7 @@ export default function Terminal() {
       });
     } catch {
       term.writeln('\x1b[1;34m☁ Cloud IDE Terminal\x1b[0m');
-      term.writeln('\x1b[90mBrowser-based shell • Type "help" for commands\x1b[0m');
+      term.writeln('\x1b[90mReal terminal unavailable in this deployment. Using local simulation.\x1b[0m');
       term.writeln('');
       localRunnerRef.current = enableLocalMode(term);
     }
