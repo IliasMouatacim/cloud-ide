@@ -5,6 +5,7 @@ export default function Terminal() {
   const xtermRef = useRef(null);
   const wsRef = useRef(null);
   const fitAddonRef = useRef(null);
+  const localRunnerRef = useRef(null);
 
   const connect = useCallback(async () => {
     // Dynamically import xterm to avoid SSR issues
@@ -73,7 +74,7 @@ export default function Terminal() {
       term.writeln('\x1b[1;34m☁ Cloud IDE Terminal\x1b[0m');
       term.writeln('\x1b[90mBrowser-based shell • Type "help" for commands\x1b[0m');
       term.writeln('');
-      enableLocalMode(term);
+      localRunnerRef.current = enableLocalMode(term);
       return;
     }
 
@@ -117,7 +118,7 @@ export default function Terminal() {
           term.writeln('\x1b[1;34m☁ Cloud IDE Terminal\x1b[0m');
           term.writeln('\x1b[90mBrowser-based shell • Type "help" for commands\x1b[0m');
           term.writeln('');
-          enableLocalMode(term);
+          localRunnerRef.current = enableLocalMode(term);
         }
       };
 
@@ -125,9 +126,11 @@ export default function Terminal() {
         if (connected) {
           term.writeln('\r\n\x1b[90mSession ended. Switching to local mode.\x1b[0m');
           term.writeln('');
-          enableLocalMode(term);
+          localRunnerRef.current = enableLocalMode(term);
         }
       };
+
+      localRunnerRef.current = null;
 
       term.onData((data) => {
         if (ws.readyState === WebSocket.OPEN) {
@@ -144,7 +147,7 @@ export default function Terminal() {
       term.writeln('\x1b[1;34m☁ Cloud IDE Terminal\x1b[0m');
       term.writeln('\x1b[90mBrowser-based shell • Type "help" for commands\x1b[0m');
       term.writeln('');
-      enableLocalMode(term);
+      localRunnerRef.current = enableLocalMode(term);
     }
   }, []);
 
@@ -159,15 +162,34 @@ export default function Terminal() {
 
     window.addEventListener('resize', handleResize);
 
+    const handleRunCommand = (event) => {
+      const command = event?.detail?.command?.trim();
+      if (!command) return;
+
+      const ws = wsRef.current;
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'terminal:input', data: `${command}\r` }));
+        return;
+      }
+
+      if (localRunnerRef.current) {
+        localRunnerRef.current(command);
+      }
+    };
+
+    window.addEventListener('cloud-ide:run-command', handleRunCommand);
+
     // Watch the container for size changes
     const observer = new ResizeObserver(handleResize);
     if (termRef.current) observer.observe(termRef.current);
 
     return () => {
       window.removeEventListener('resize', handleResize);
+      window.removeEventListener('cloud-ide:run-command', handleRunCommand);
       observer.disconnect();
       if (wsRef.current) wsRef.current.close();
       if (xtermRef.current) xtermRef.current.dispose();
+      localRunnerRef.current = null;
     };
   }, [connect]);
 
@@ -219,43 +241,47 @@ function enableLocalMode(term) {
   term.writeln('');
   term.write('$ ');
 
+  const executeCommand = (cmd) => {
+    const trimmed = (cmd || '').trim();
+    if (!trimmed) {
+      term.write('$ ');
+      return;
+    }
+
+    const parts = trimmed.split(/\s+/);
+    const base = parts[0];
+
+    if (base === 'echo') {
+      term.writeln(parts.slice(1).join(' '));
+    } else if (base === 'cat') {
+      const target = parts[1];
+      if (!target) {
+        term.writeln('usage: cat <file>');
+      } else {
+        term.writeln(fakeFiles[target] || `cat: ${target}: No such file or directory`);
+      }
+    } else if (base === 'clear') {
+      term.write('\x1b[2J\x1b[H');
+    } else if (base === 'python' || base === 'python3') {
+      term.writeln(`Python simulation - would run: ${trimmed}`);
+    } else if (base === 'pip' || base === 'pip3') {
+      term.writeln(`pip simulation - would run: ${trimmed}`);
+    } else if (base === 'node' || base === 'npm' || base === 'npx' || base === 'next') {
+      term.writeln(`Node.js simulation - would run: ${trimmed}`);
+    } else if (commands[base]) {
+      term.writeln(commands[base]);
+    } else {
+      term.writeln(`\x1b[31mcommand not found: ${base}\x1b[0m`);
+    }
+    term.write('$ ');
+  };
+
   term.onData((data) => {
     if (data === '\r') {
       const cmd = buffer.trim();
       buffer = '';
       term.write('\r\n');
-
-      if (!cmd) {
-        term.write('$ ');
-        return;
-      }
-
-      const parts = cmd.split(/\s+/);
-      const base = parts[0];
-
-      if (base === 'echo') {
-        term.writeln(parts.slice(1).join(' '));
-      } else if (base === 'cat') {
-        const target = parts[1];
-        if (!target) {
-          term.writeln('usage: cat <file>');
-        } else {
-          term.writeln(fakeFiles[target] || `cat: ${target}: No such file or directory`);
-        }
-      } else if (base === 'clear') {
-        term.write('\x1b[2J\x1b[H');
-      } else if (base === 'python' || base === 'python3') {
-        term.writeln(`Python simulation - would run: ${cmd}`);
-      } else if (base === 'pip' || base === 'pip3') {
-        term.writeln(`pip simulation - would run: ${cmd}`);
-      } else if (base === 'node' || base === 'npm' || base === 'npx' || base === 'next') {
-        term.writeln(`Node.js simulation - would run: ${cmd}`);
-      } else if (commands[base]) {
-        term.writeln(commands[base]);
-      } else {
-        term.writeln(`\x1b[31mcommand not found: ${base}\x1b[0m`);
-      }
-      term.write('$ ');
+      executeCommand(cmd);
     } else if (data === '\x7f') {
       if (buffer.length > 0) {
         buffer = buffer.slice(0, -1);
@@ -266,4 +292,9 @@ function enableLocalMode(term) {
       term.write(data);
     }
   });
+
+  return (command) => {
+    term.write(`${command}\r\n`);
+    executeCommand(command);
+  };
 }

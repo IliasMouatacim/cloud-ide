@@ -21,6 +21,7 @@ export default function App() {
   const fs = useFileSystem();
   const [showPreview, setShowPreview] = useState(true);
   const [showTerminal, setShowTerminal] = useState(true);
+  const [devServerPort, setDevServerPort] = useState('');
   const [showGit, setShowGit] = useState(false);
   const [sidebarSection, setSidebarSection] = useState('files'); // files | search | git | extensions | ai
   const [showQuickOpen, setShowQuickOpen] = useState(false);
@@ -28,7 +29,39 @@ export default function App() {
 
   const handleRunCode = useCallback(() => {
     setShowPreview(true);
-  }, []);
+    setShowTerminal(true);
+
+    const files = fs.files || {};
+    const hasNextJs = Boolean(files['next.config.mjs'])
+      || Boolean(files['next.config.js'])
+      || Boolean(files['app/page.jsx'])
+      || Boolean(files['app/page.tsx'])
+      || (typeof files['package.json'] === 'string' && files['package.json'].includes('"next"'));
+
+    if (hasNextJs) {
+      setDevServerPort('3000');
+      // Delay dispatch slightly so terminal can mount/open first.
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('cloud-ide:run-command', {
+          detail: { command: 'npm install && npm run dev' }
+        }));
+      }, 120);
+      return;
+    }
+
+    const activeIsPython = typeof fs.activeFile === 'string' && fs.activeFile.endsWith('.py');
+    const pythonEntry = activeIsPython
+      ? fs.activeFile
+      : (files['main.py'] !== undefined ? 'main.py' : null);
+
+    if (pythonEntry) {
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('cloud-ide:run-command', {
+          detail: { command: `python3 ${pythonEntry}` }
+        }));
+      }, 120);
+    }
+  }, [fs.activeFile, fs.files]);
 
   /* ── Read a single file handle into text ────────────────────────── */
   const readFileHandle = async (handle, basePath = '') => {
@@ -299,6 +332,8 @@ export default function App() {
         onSave={handleSave}
         onDownload={handleDownloadProject}
         onToggleSearch={() => setSidebarSection('search')}
+        devServerPort={devServerPort}
+        onDevServerPortChange={setDevServerPort}
       />
 
       {/* Main content */}
@@ -382,7 +417,7 @@ export default function App() {
               <>
                 <PanelResizeHandle />
                 <Panel defaultSize={32} minSize={15}>
-                  <LivePreview files={fs.files} />
+                  <LivePreview files={fs.files} activeFile={fs.activeFile} devServerPort={devServerPort} />
                 </Panel>
               </>
             )}
