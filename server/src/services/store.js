@@ -34,6 +34,14 @@ const TEMPLATES = {
     'style.css': 'body {\n  font-family: system-ui, sans-serif;\n  margin: 0;\n  padding: 2rem;\n  background: #1e1e2e;\n  color: #cdd6f4;\n}\n\nh1 {\n  color: #89b4fa;\n}',
     'script.js': 'console.log("Hello from Cloud IDE!");\n'
   },
+  nextjs: {
+    'package.json': '{\n  "name": "next-app",\n  "private": true,\n  "version": "0.1.0",\n  "scripts": {\n    "dev": "next dev",\n    "build": "next build",\n    "start": "next start",\n    "lint": "next lint"\n  },\n  "dependencies": {\n    "next": "14.2.5",\n    "react": "18.3.1",\n    "react-dom": "18.3.1"\n  }\n}\n',
+    'next.config.mjs': '/** @type {import("next").NextConfig} */\nconst nextConfig = {};\n\nexport default nextConfig;\n',
+    'app/layout.jsx': 'import "./globals.css";\n\nexport const metadata = {\n  title: "Cloud IDE Next App",\n  description: "Generated in Cloud IDE"\n};\n\nexport default function RootLayout({ children }) {\n  return (\n    <html lang="en">\n      <body>{children}</body>\n    </html>\n  );\n}\n',
+    'app/page.jsx': 'export default function HomePage() {\n  return (\n    <main style={{ fontFamily: "Inter, sans-serif", padding: "3rem", maxWidth: "720px", margin: "0 auto" }}>\n      <h1 style={{ fontSize: "2rem", marginBottom: "0.75rem" }}>Next.js in Cloud IDE</h1>\n      <p style={{ lineHeight: 1.6, marginBottom: "1rem" }}>\n        Edit app/page.jsx and app/layout.jsx to start building your app.\n      </p>\n      <code style={{ background: "#111827", color: "#e5e7eb", padding: "0.45rem 0.6rem", borderRadius: "8px", display: "inline-block" }}>\n        npm install && npm run dev\n      </code>\n    </main>\n  );\n}\n',
+    'app/globals.css': '* { box-sizing: border-box; }\nhtml, body { margin: 0; padding: 0; }\nbody { background: #f8fafc; color: #0f172a; }\n',
+    'README.md': '# Next.js Project\n\n1. Install dependencies: `npm install`\n2. Start dev server: `npm run dev`\n3. Set Preview Port to `3000` in the top bar\n'
+  },
   react: {
     'index.html': '<!DOCTYPE html>\n<html lang="en">\n<head>\n  <meta charset="UTF-8">\n  <meta name="viewport" content="width=device-width, initial-scale=1.0">\n  <title>React App</title>\n</head>\n<body>\n  <div id="root"></div>\n  <script type="module" src="index.jsx"></script>\n</body>\n</html>',
     'index.jsx': 'import React from "react";\nimport ReactDOM from "react-dom/client";\nimport App from "./App";\n\nReactDOM.createRoot(document.getElementById("root")).render(<App />);\n',

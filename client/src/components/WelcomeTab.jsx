@@ -15,6 +15,11 @@ const TEMPLATES = [
     icon: 'M4 4h16v16H4zM8 8h8M8 12h8M8 16h4',
   },
   {
+    id: 'nextjs', name: 'Next.js', desc: 'App Router starter project',
+    color: '#111827',
+    icon: 'M12 2a10 10 0 100 20 10 10 0 000-20M8 16V8l8 8V8',
+  },
+  {
     id: 'react', name: 'React', desc: 'React app with JSX components',
     color: '#61dafb',
     icon: 'M12 12m-2 0a2 2 0 104 0 2 2 0 10-4 0M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2',

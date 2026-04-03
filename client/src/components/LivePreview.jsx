@@ -60,7 +60,13 @@ export default function LivePreview({ files, activeFile, devServerPort }) {
 
     if (!htmlPath) {
       // No HTML file — check if it's a non-web project
-      if (files['main.py'] || files['index.js'] || files['main.go']) {
+      const hasNextJs = Boolean(files['next.config.mjs'])
+        || Boolean(files['next.config.js'])
+        || Boolean(files['app/page.jsx'])
+        || Boolean(files['app/page.tsx'])
+        || (typeof files['package.json'] === 'string' && files['package.json'].includes('"next"'));
+
+      if (files['main.py'] || files['index.js'] || files['main.go'] || hasNextJs) {
         return null; // Not a web project
       }
       return '';
@@ -212,8 +218,9 @@ export default function LivePreview({ files, activeFile, devServerPort }) {
         <div className="flex-1 flex items-center justify-center text-ide-textMuted text-sm">
           <div className="text-center">
             <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="mx-auto mb-3 text-ide-textSubtle"><rect x="2" y="3" width="20" height="14" rx="2" /><path d="M8 21h8M12 17v4" /></svg>
-            <p>Preview not available for this project type.</p>
-            <p className="text-xs text-ide-textSubtle mt-1">Use the terminal to run your code.</p>
+            <p>Preview not available for this project type yet.</p>
+            <p className="text-xs text-ide-textSubtle mt-1">For Next.js run npm install && npm run dev, then set Preview Port to 3000.</p>
+            <p className="text-xs text-ide-textSubtle mt-1">For Python, run scripts from the terminal.</p>
           </div>
         </div>
       </div>

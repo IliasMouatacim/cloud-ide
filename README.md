@@ -22,7 +22,7 @@ A full-featured, browser-based cloud IDE inspired by VS Code, CodeSandbox, and R
 - **Git Integration** — Branch switching, commit, push/pull UI
 - **Authentication** — Email/password with JWT tokens; GitHub OAuth ready
 - **Code Execution Sandbox** — Isolated Docker containers for Python, Node.js, Bash with CPU/memory limits
-- **Project Templates** — HTML, React, Node.js, Python starter templates
+- **Project Templates** — HTML, React, Next.js, Node.js, Python starter templates
 
 ---
 

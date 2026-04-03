@@ -106,16 +106,21 @@ function executeSimpleCommand(cmd) {
   const command = parts[0];
 
   const commands = {
-    help: () => 'Available commands: help, echo, date, clear, whoami, pwd, ls',
+    help: () => 'Available commands: help, echo, date, clear, whoami, pwd, ls, node, npm, npx, next, python, python3, pip, pip3, git',
     echo: () => parts.slice(1).join(' '),
     date: () => new Date().toISOString(),
     whoami: () => 'cloud-ide-user',
     pwd: () => '/home/user/project',
-    ls: () => 'index.html  script.js  style.css  package.json',
+    ls: () => 'app/  package.json  main.py  requirements.txt',
     clear: () => '\x1b[2J\x1b[H',
     node: () => `Node.js simulation - would run: ${parts.slice(1).join(' ')}`,
     npm: () => `npm simulation - would run: npm ${parts.slice(1).join(' ')}`,
+    npx: () => `npx simulation - would run: npx ${parts.slice(1).join(' ')}`,
+    next: () => `Next.js simulation - would run: next ${parts.slice(1).join(' ')}`,
     python: () => `Python simulation - would run: python ${parts.slice(1).join(' ')}`,
+    python3: () => `Python simulation - would run: python3 ${parts.slice(1).join(' ')}`,
+    pip: () => `pip simulation - would run: pip ${parts.slice(1).join(' ')}`,
+    pip3: () => `pip simulation - would run: pip3 ${parts.slice(1).join(' ')}`,
     git: () => `Git simulation - would run: git ${parts.slice(1).join(' ')}`,
   };
 

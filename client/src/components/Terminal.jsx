@@ -202,12 +202,17 @@ export default function Terminal() {
 
 function enableLocalMode(term) {
   let buffer = '';
+  const fakeFiles = {
+    'package.json': '{"name":"next-app","scripts":{"dev":"next dev"}}',
+    'app/page.jsx': 'export default function HomePage() { return <main>Hello</main>; }',
+    'main.py': 'print("Hello from Python")',
+  };
   const commands = {
-    help: 'Available: help, echo, date, clear, whoami, pwd, ls, cat',
+    help: 'Available: help, echo, date, clear, whoami, pwd, ls, cat, node, npm, npx, next, python, python3, pip, pip3',
     date: new Date().toISOString(),
     whoami: 'cloud-ide-user',
     pwd: '/home/user/project',
-    ls: 'index.html  script.js  style.css',
+    ls: 'app/  main.py  package.json  requirements.txt',
     clear: '\x1b[2J\x1b[H',
   };
 
@@ -230,8 +235,21 @@ function enableLocalMode(term) {
 
       if (base === 'echo') {
         term.writeln(parts.slice(1).join(' '));
+      } else if (base === 'cat') {
+        const target = parts[1];
+        if (!target) {
+          term.writeln('usage: cat <file>');
+        } else {
+          term.writeln(fakeFiles[target] || `cat: ${target}: No such file or directory`);
+        }
       } else if (base === 'clear') {
         term.write('\x1b[2J\x1b[H');
+      } else if (base === 'python' || base === 'python3') {
+        term.writeln(`Python simulation - would run: ${cmd}`);
+      } else if (base === 'pip' || base === 'pip3') {
+        term.writeln(`pip simulation - would run: ${cmd}`);
+      } else if (base === 'node' || base === 'npm' || base === 'npx' || base === 'next') {
+        term.writeln(`Node.js simulation - would run: ${cmd}`);
       } else if (commands[base]) {
         term.writeln(commands[base]);
       } else {

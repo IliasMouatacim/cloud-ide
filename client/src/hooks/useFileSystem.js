@@ -9,6 +9,14 @@ const DEFAULT_FILES = {
 const TEMPLATES = {
   blank: { 'index.html': '', 'style.css': '', 'script.js': '' },
   html: DEFAULT_FILES,
+  nextjs: {
+    'package.json': '{\n  "name": "next-app",\n  "private": true,\n  "version": "0.1.0",\n  "scripts": {\n    "dev": "next dev",\n    "build": "next build",\n    "start": "next start",\n    "lint": "next lint"\n  },\n  "dependencies": {\n    "next": "14.2.5",\n    "react": "18.3.1",\n    "react-dom": "18.3.1"\n  }\n}\n',
+    'next.config.mjs': '/** @type {import("next").NextConfig} */\nconst nextConfig = {};\n\nexport default nextConfig;\n',
+    'app/layout.jsx': 'import "./globals.css";\n\nexport const metadata = {\n  title: "Cloud IDE Next App",\n  description: "Generated in Cloud IDE"\n};\n\nexport default function RootLayout({ children }) {\n  return (\n    <html lang="en">\n      <body>{children}</body>\n    </html>\n  );\n}\n',
+    'app/page.jsx': 'export default function HomePage() {\n  return (\n    <main style={{ fontFamily: "Inter, sans-serif", padding: "3rem", maxWidth: "720px", margin: "0 auto" }}>\n      <h1 style={{ fontSize: "2rem", marginBottom: "0.75rem" }}>Next.js in Cloud IDE</h1>\n      <p style={{ lineHeight: 1.6, marginBottom: "1rem" }}>\n        Edit app/page.jsx and app/layout.jsx to start building your app.\n      </p>\n      <code style={{ background: "#111827", color: "#e5e7eb", padding: "0.45rem 0.6rem", borderRadius: "8px", display: "inline-block" }}>\n        npm install && npm run dev\n      </code>\n    </main>\n  );\n}\n',
+    'app/globals.css': '* { box-sizing: border-box; }\nhtml, body { margin: 0; padding: 0; }\nbody { background: #f8fafc; color: #0f172a; }\n',
+    'README.md': '# Next.js Project\n\n1. Install dependencies: `npm install`\n2. Start dev server: `npm run dev`\n3. Set Preview Port to `3000` in the top bar\n'
+  },
   react: {
     'index.html': '<!DOCTYPE html>\n<html lang="en">\n<head>\n  <meta charset="UTF-8">\n  <meta name="viewport" content="width=device-width, initial-scale=1.0">\n  <title>React App</title>\n</head>\n<body>\n  <div id="root"></div>\n  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>\n  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>\n  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>\n  <script type="text/babel" src="App.jsx"></script>\n</body>\n</html>',
     'App.jsx': 'function App() {\n  const [count, setCount] = React.useState(0);\n  return (\n    <div style={{ padding: "2rem", fontFamily: "system-ui", background: "#1e1e2e", color: "#cdd6f4", minHeight: "100vh" }}>\n      <h1 style={{ color: "#89b4fa" }}>React App</h1>\n      <p>Count: {count}</p>\n      <button onClick={() => setCount(c => c + 1)} style={{ background: "#89b4fa", color: "#1e1e2e", border: "none", padding: "0.5rem 1.5rem", borderRadius: "6px", cursor: "pointer", fontSize: "1rem" }}>\n        Increment\n      </button>\n    </div>\n  );\n}\n\nReactDOM.createRoot(document.getElementById("root")).render(<App />);\n',
@@ -198,6 +206,7 @@ function getDefaultContent(path) {
     json: '{\n  \n}\n',
     md: '# Title\n',
     py: '# New Python file\n',
+    mjs: '// New JavaScript module\n',
     ts: '// New TypeScript file\n',
     tsx: 'export default function Component() {\n  return <div>New Component</div>;\n}\n',
   };
