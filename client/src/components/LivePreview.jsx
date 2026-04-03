@@ -5,6 +5,20 @@ export default function LivePreview({ files, activeFile, devServerPort }) {
   const [error, setError] = useState(null);
   const [lastUpdate, setLastUpdate] = useState(null);
 
+  const previewUrl = useMemo(() => {
+    if (!devServerPort) return '';
+
+    if (import.meta.env.VITE_PREVIEW_URL) {
+      return import.meta.env.VITE_PREVIEW_URL;
+    }
+
+    if (import.meta.env.VITE_PREVIEW_BASE_URL) {
+      return `${import.meta.env.VITE_PREVIEW_BASE_URL.replace(/\/$/, '')}:${devServerPort}`;
+    }
+
+    return `http://localhost:${devServerPort}`;
+  }, [devServerPort]);
+
   const htmlContent = useMemo(() => {
     if (!files) return '';
 
@@ -279,7 +293,7 @@ export default function LivePreview({ files, activeFile, devServerPort }) {
           <iframe
             ref={iframeRef}
             title="Live Server Preview"
-            src={`http://localhost:${devServerPort}`}
+            src={previewUrl}
             className="w-full h-full border-0"
           />
         ) : (

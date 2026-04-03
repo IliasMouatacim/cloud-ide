@@ -67,7 +67,9 @@ export default function Terminal() {
     // Always try real WebSocket terminal first.
     // If unavailable in the current deployment, we fallback to local simulation.
     let wsUrl = '';
-    if (import.meta.env.VITE_API_URL) {
+    if (import.meta.env.VITE_TERMINAL_WS_URL) {
+      wsUrl = import.meta.env.VITE_TERMINAL_WS_URL;
+    } else if (import.meta.env.VITE_API_URL) {
       // Convert http:// to ws:// and https:// to wss://
       wsUrl = import.meta.env.VITE_API_URL.replace(/^http/, 'ws') + '/ws?type=terminal';
     } else {

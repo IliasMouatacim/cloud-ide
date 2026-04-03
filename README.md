@@ -109,6 +109,24 @@ npm run dev
 
 The client runs on `http://localhost:5173` and proxies API requests to the server on port `3001`.
 
+### Runtime Note (Terminal + Next.js/Python)
+
+If you deploy only the client (or deploy on serverless platforms without persistent WebSocket + PTY process support), the integrated terminal falls back to simulation and cannot run real `npm`/`python` commands.
+
+For real execution in hosted environments:
+
+- Deploy the Node server (`server/src/index.js`) on a host that supports long-lived WebSockets and processes (Docker VM, Railway, Fly.io, Render, etc.).
+- Point the client to that runtime host with environment variables:
+
+```bash
+VITE_API_URL=https://your-runtime-host
+VITE_TERMINAL_WS_URL=wss://your-runtime-host/ws?type=terminal
+VITE_PREVIEW_URL=https://your-preview-host
+# or: VITE_PREVIEW_BASE_URL=https://your-preview-host
+```
+
+`VITE_PREVIEW_URL` is the full URL used by preview iframe when a dev server port is set. If not provided, preview defaults to `http://localhost:<port>`.
+
 ### Production (Docker)
 
 ```bash
