@@ -1,7 +1,7 @@
 /**
  * In-memory store for development. Replace with PostgreSQL for production.
  */
-const { v4: uuidv4 } = require('uuid');
+const { randomUUID: uuidv4 } = require('node:crypto');
 
 const users = new Map();
 const projects = new Map();
@@ -58,12 +58,13 @@ const TEMPLATES = {
   }
 };
 
-function createProject({ name, userId, template }) {
+function createProject({ name, userId, template, files: snapshot }) {
   const id = uuidv4();
   const project = {
     id,
     name,
     userId,
+    revision: 0,
     template,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
@@ -71,7 +72,7 @@ function createProject({ name, userId, template }) {
   projects.set(id, project);
 
   // Populate template files
-  const templateFiles = TEMPLATES[template] || {};
+  const templateFiles = snapshot || TEMPLATES[template] || {};
   for (const [path, content] of Object.entries(templateFiles)) {
     upsertFile(id, path, content);
   }
@@ -115,6 +116,7 @@ function upsertFile(projectId, filePath, content) {
   // Update project timestamp
   const project = projects.get(projectId);
   if (project) {
+    project.revision++;
     project.updatedAt = new Date().toISOString();
   }
 
@@ -136,6 +138,8 @@ function getFile(projectId, filePath) {
 }
 
 function deleteFile(projectId, filePath) {
+  const project = projects.get(projectId);
+  if (project) { project.revision++; project.updatedAt = new Date().toISOString(); }
   files.delete(`${projectId}:${filePath}`);
 }
 
@@ -143,5 +147,19 @@ module.exports = {
   createUser, getUserByEmail, getUser,
   createProject, getProject, getProjectsByUser, deleteProject,
   upsertFile, getFilesByProject, getFile, deleteFile,
-  TEMPLATES
+  TEMPLATES,
+  readSnapshot(id) {
+    const project = getProject(id);
+    return project ? { project: { ...project }, files: Object.fromEntries(getFilesByProject(id).map(f => [f.path, f.content])) } : null;
+  },
+  replaceSnapshot(id, userId, revision, name, nextFiles) {
+    const project = getProject(id);
+    if (!project || project.userId !== userId || project.revision !== revision) return null;
+    for (const file of getFilesByProject(id)) files.delete(`${id}:${file.path}`);
+    for (const [path, content] of Object.entries(nextFiles)) files.set(`${id}:${path}`, {projectId:id,path,content,updatedAt:new Date().toISOString()});
+    Object.assign(project, {name, revision:revision+1, updatedAt:new Date().toISOString()});
+    return { ...project };
+  }
 };
+
+if (process.env.DATABASE_URL) module.exports = require('./postgres')(TEMPLATES);

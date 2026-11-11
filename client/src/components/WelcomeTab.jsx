@@ -10,13 +10,13 @@ const TplIcon = ({ d, color }) => (
 
 const TEMPLATES = [
   {
-    id: 'html', name: 'HTML / CSS / JS', desc: 'Classic web project',
+    id: 'html', name: 'HTML / CSS / JS', desc: 'The essentials of the web',
     color: '#e34c26',
     icon: 'M4 4h16v16H4zM8 8h8M8 12h8M8 16h4',
   },
   {
     id: 'nextjs', name: 'Next.js', desc: 'App Router starter project',
-    color: '#111827',
+    color: '#e2e8f0',
     icon: 'M12 2a10 10 0 100 20 10 10 0 000-20M8 16V8l8 8V8',
   },
   {
@@ -35,7 +35,7 @@ const TEMPLATES = [
     icon: 'M12 2C6.5 2 6 4.5 6 4.5V8h6v1H5s-3-.5-3 4 2.5 4 2.5 4H7v-3s-.2-2.5 2.5-2.5h5s2.3.1 2.3-2.3V4.5S17.5 2 12 2z',
   },
   {
-    id: 'blank', name: 'Blank', desc: 'Empty project',
+    id: 'blank', name: 'Blank', desc: 'Make room for your next idea',
     color: '#6c7086',
     icon: 'M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8zM14 2v6h6',
   },
@@ -52,34 +52,34 @@ const SHORTCUTS = [
 
 export default function WelcomeTab({ onNewProject }) {
   return (
-    <div className="flex-1 flex items-center justify-center bg-ide-bg overflow-auto animate-fadeIn">
-      <div className="max-w-xl w-full p-8">
+    <div className="welcome-screen flex-1 overflow-auto animate-fadeIn">
+      <div className="welcome-content">
         {/* Logo / Title */}
-        <div className="text-center mb-10">
+        <div className="mb-10">
           <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-accent mb-4 shadow-glow">
             <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#11111b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M18 10h-1.26A8 8 0 109 20h9a5 5 0 000-10z" />
             </svg>
           </div>
-          <h1 className="text-2xl font-bold text-ide-text tracking-tight mb-2">
-            Welcome to <span className="bg-gradient-to-r from-ide-accent to-ide-accentHover bg-clip-text text-transparent">Cloud IDE</span>
+          <h1 className="text-4xl font-semibold text-ide-text tracking-tight mb-2">
+            Build something <span className="bg-gradient-to-r from-ide-accent to-ide-accentHover bg-clip-text text-transparent">remarkable.</span>
           </h1>
           <p className="text-sm text-ide-textMuted">
-            Write, run, and preview code — right in your browser.
+            Your ideas, your workspace. Go from a blank canvas to a live preview without leaving your browser.
           </p>
         </div>
 
         {/* New Project Templates */}
         <div className="mb-10">
           <h2 className="text-[11px] font-semibold text-ide-textMuted uppercase tracking-widest mb-3 px-1">
-            Start a New Project
+            Choose your starting point
           </h2>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
             {TEMPLATES.map(t => (
               <button
                 key={t.id}
                 onClick={() => onNewProject(t.id)}
-                className="flex items-center gap-3 p-3.5 bg-ide-sidebar/70 border border-ide-border/60 rounded-lg
+                className="flex items-center gap-3 p-5 bg-ide-sidebar/70 border border-ide-border/60 rounded-lg
                            hover:border-ide-accent/40 hover:bg-ide-accent/5 transition-all text-left group
                            hover:shadow-glow active:scale-[0.98]"
               >

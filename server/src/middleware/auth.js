@@ -2,7 +2,7 @@ const jwt = require('jsonwebtoken');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-in-production';
 
-function authenticateToken(req, res, next) {
+async function authenticateToken(req, res, next) {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.startsWith('Bearer ')
     ? authHeader.slice(7)
@@ -13,11 +13,13 @@ function authenticateToken(req, res, next) {
   }
 
   try {
-    const user = jwt.verify(token, JWT_SECRET);
+    const user = jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'] });
+    if (!user.id || !await require('../services/store').getUser(user.id)) return res.status(401).json({error: 'Session is no longer valid'});
     req.user = user;
     next();
-  } catch {
-    return res.status(403).json({ error: 'Invalid or expired token' });
+  } catch (error) {
+    if (!['JsonWebTokenError','TokenExpiredError','NotBeforeError'].includes(error.name)) return next(error);
+    return res.status(401).json({ error: 'Invalid or expired token' });
   }
 }
 

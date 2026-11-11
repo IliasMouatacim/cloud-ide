@@ -165,9 +165,11 @@ export function useFileSystem() {
     return files[path] ?? '';
   }, [files]);
 
+  const [workspaceEpoch, setWorkspaceEpoch] = useState(0);
   const loadTemplate = useCallback((templateName) => {
     const template = TEMPLATES[templateName];
     if (!template) return;
+    setWorkspaceEpoch(n => n + 1);
     setFiles(template);
     savedContents.current = { ...template };
     const firstFile = Object.keys(template)[0];
@@ -188,7 +190,19 @@ export function useFileSystem() {
     if (name) setProjectName(name);
   }, []);
 
+  const replaceWorkspace = useCallback((nextFiles, name) => {
+    setWorkspaceEpoch(n => n + 1);
+    savedContents.current = { ...nextFiles };
+    setFiles(nextFiles);
+    const first = Object.keys(nextFiles)[0] || null;
+    setOpenFiles(first ? [first] : []);
+    setActiveFile(first);
+    setModifiedFiles(new Set());
+    setProjectName(name);
+  }, []);
+
   return {
+    replaceWorkspace, workspaceEpoch,
     files, openFiles, activeFile, modifiedFiles, projectName, cursorPosition,
     setProjectName, setCursorPosition,
     openFile, closeFile, createFile, createFolder, deleteFile, renameFile,

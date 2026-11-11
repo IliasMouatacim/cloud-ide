@@ -12,6 +12,7 @@ import StatusBar from './components/StatusBar';
 import WelcomeTab from './components/WelcomeTab';
 import QuickOpen from './components/QuickOpen';
 import ErrorBoundary from './components/ErrorBoundary';
+import CloudProjects from './components/CloudProjects';
 import AIPanel from './components/AIPanel';
 import { useFileSystem } from './hooks/useFileSystem';
 import { useAuth } from './hooks/useAuth';
@@ -315,6 +316,7 @@ export default function App() {
         />
       )}
 
+      <CloudProjects token={token} user={user} workspace={fs} onSignIn={() => setShowAuth(true)} />
       {/* Titlebar */}
       <Titlebar
         user={user}
@@ -405,7 +407,7 @@ export default function App() {
                   <>
                     <PanelResizeHandle />
                     <Panel defaultSize={30} minSize={10} maxSize={60}>
-                      <Terminal />
+                      <Terminal token={token} />
                     </Panel>
                   </>
                 )}

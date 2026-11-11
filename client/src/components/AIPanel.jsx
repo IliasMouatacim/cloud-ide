@@ -45,10 +45,11 @@ export default function AIPanel({ activeFile, activeFileContent }) {
                 content: activeFileContent
             } : null;
 
-            const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/ai/chat`, {
+            const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/ai/chat`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    Authorization: `Bearer ${localStorage.getItem('ide_token') || ''}`,
                 },
                 body: JSON.stringify({
                     message: userMessage,
@@ -58,7 +59,8 @@ export default function AIPanel({ activeFile, activeFileContent }) {
             });
 
             if (!response.ok) {
-                throw new Error('Server returned an error');
+                const data = await response.json();
+                throw new Error(data.error || 'Server returned an error');
             }
 
             const data = await response.json();

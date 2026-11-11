@@ -6,3 +6,7 @@ client/dist/
 .env
 .env.local
 .docker-data/
+.git/
+.env.*
+!.env.example
+server/public/

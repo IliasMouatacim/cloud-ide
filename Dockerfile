@@ -1,33 +1,21 @@
-# ── Build client ──
-FROM node:20-alpine AS client-build
-WORKDIR /app/client
-COPY client/package.json client/package-lock.json* ./
-RUN npm ci
-COPY client/ ./
-RUN npm run build
-
-# ── Production server ──
-FROM node:20-alpine
+# syntax=docker/dockerfile:1
+FROM node:22-bookworm AS build
 WORKDIR /app
+COPY package.json package-lock.json ./
+COPY client/package.json ./client/
+COPY server/package.json ./server/
+RUN --mount=type=secret,id=proxy_ca NODE_EXTRA_CA_CERTS=/run/secrets/proxy_ca npm ci
+COPY client ./client
+RUN npm run build
+RUN npm prune --omit=dev
 
-# Install native deps for node-pty
-RUN apk add --no-cache python3 make g++ bash
-
-COPY server/package.json server/package-lock.json* ./
-RUN npm ci --omit=dev
-
-COPY server/src ./src
-
-# Copy built client into server's public folder
-COPY --from=client-build /app/client/dist ./public
-
-# Environment
-ENV NODE_ENV=production
-ENV PORT=3001
+FROM node:22-bookworm-slim
+WORKDIR /app
+ENV NODE_ENV=production PORT=3001
+COPY --from=build --chown=node:node /app/node_modules ./node_modules
+COPY --chown=node:node server ./server
+COPY --from=build --chown=node:node /app/client/dist ./server/public
+USER node
 EXPOSE 3001
-
-# Health check
-HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-  CMD wget -q --spider http://localhost:3001/api/health || exit 1
-
-CMD ["node", "src/index.js"]
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s CMD node -e "fetch('http://localhost:3001/api/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"
+CMD ["node", "server/src/index.js"]

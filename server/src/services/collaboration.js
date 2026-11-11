@@ -76,6 +76,7 @@ function handleConnection(ws, projectId) {
 function broadcast(room, sender, message) {
   const data = JSON.stringify(message);
   for (const client of room) {
+    if (client.bufferedAmount > 1048576) {client.close(1013, 'Client is too slow');continue;}
     if (client !== sender && client.readyState === client.OPEN) {
       client.send(data);
     }

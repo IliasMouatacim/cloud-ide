@@ -1,5 +1,19 @@
 import React, { useRef, useCallback, useEffect } from 'react';
-import Editor from '@monaco-editor/react';
+import Editor, { loader } from '@monaco-editor/react';
+import * as monaco from 'monaco-editor';
+import EditorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker';
+import JsonWorker from 'monaco-editor/esm/vs/language/json/json.worker?worker';
+import CssWorker from 'monaco-editor/esm/vs/language/css/css.worker?worker';
+import HtmlWorker from 'monaco-editor/esm/vs/language/html/html.worker?worker';
+import TsWorker from 'monaco-editor/esm/vs/language/typescript/ts.worker?worker';
+self.MonacoEnvironment = { getWorker(_, label) {
+  if (label === 'json') return new JsonWorker();
+  if (['css', 'scss', 'less'].includes(label)) return new CssWorker();
+  if (['html', 'handlebars', 'razor'].includes(label)) return new HtmlWorker();
+  if (['typescript', 'javascript'].includes(label)) return new TsWorker();
+  return new EditorWorker();
+} };
+loader.config({ monaco });
 
 const LANGUAGE_MAP = {
   js: 'javascript', jsx: 'javascript', ts: 'typescript', tsx: 'typescript',
@@ -40,26 +54,26 @@ export default function CodeEditor({ file, content, onChange, onSave, onCursorCh
         { token: 'delimiter', foreground: '9399b2' },
       ],
       colors: {
-        'editor.background': '#1e1e2e',
+        'editor.background': '#10151e',
         'editor.foreground': '#cdd6f4',
-        'editor.lineHighlightBackground': '#313244',
+        'editor.lineHighlightBackground': '#293447',
         'editor.selectionBackground': '#45475a',
-        'editor.inactiveSelectionBackground': '#31324480',
+        'editor.inactiveSelectionBackground': '#29344780',
         'editorCursor.foreground': '#f5e0dc',
-        'editorWhitespace.foreground': '#31324450',
-        'editorIndentGuide.background': '#31324480',
+        'editorWhitespace.foreground': '#29344750',
+        'editorIndentGuide.background': '#29344780',
         'editorIndentGuide.activeBackground': '#45475a',
         'editorLineNumber.foreground': '#6c7086',
         'editorLineNumber.activeForeground': '#cdd6f4',
         'editor.selectionHighlightBackground': '#45475a40',
         'editorBracketMatch.background': '#45475a50',
         'editorBracketMatch.border': '#89b4fa50',
-        'editorWidget.background': '#181825',
-        'editorSuggestWidget.background': '#181825',
-        'editorSuggestWidget.border': '#313244',
-        'editorSuggestWidget.selectedBackground': '#313244',
-        'list.hoverBackground': '#313244',
-        'minimap.background': '#181825',
+        'editorWidget.background': '#151c27',
+        'editorSuggestWidget.background': '#151c27',
+        'editorSuggestWidget.border': '#293447',
+        'editorSuggestWidget.selectedBackground': '#293447',
+        'list.hoverBackground': '#293447',
+        'minimap.background': '#151c27',
       }
     });
 

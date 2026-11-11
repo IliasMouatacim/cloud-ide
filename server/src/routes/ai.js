@@ -1,24 +1,14 @@
 const express = require('express');
-const { GoogleGenAI } = require('@google/genai');
-
 const router = express.Router();
-let ai = null;
-
-try {
-    if (process.env.GEMINI_API_KEY) {
-        ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-    }
-} catch (error) {
-    console.error("Failed to initialize Google Gen AI:", error);
-}
 
 router.post('/chat', async (req, res) => {
-    if (!ai) {
-        return res.status(500).json({ error: 'Gemini API is not configured on the server.' });
+    if (!process.env.GEMINI_API_KEY) {
+        return res.status(503).json({ error: 'Gemini API is not configured on the server.' });
     }
 
     try {
         const { message, activeFileContext, history } = req.body;
+        if (typeof message !== 'string' || !message.trim() || message.length > 16000 || (history !== undefined && (!Array.isArray(history) || history.length > 30 || history.some(m=>!m || !['user','assistant'].includes(m.role) || typeof m.content !== 'string' || m.content.length > 16000))) || (activeFileContext && (typeof activeFileContext.path !== 'string' || typeof activeFileContext.content !== 'string' || activeFileContext.content.length > 100000))) return res.status(400).json({error:'Invalid or oversized AI input'});
 
         let systemInstruction = "You are an expert AI programming assistant built directly into a Cloud IDE.\n" +
             "You help the user understand code, write new code, and debug errors.\n" +
@@ -47,19 +37,21 @@ router.post('/chat', async (req, res) => {
             parts: [{ text: message }]
         });
 
-        const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash',
-            contents: contents,
-            config: {
-                systemInstruction: systemInstruction,
-                temperature: 0.7,
-            }
+        const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent', {
+            method: 'POST',
+            headers: {'Content-Type':'application/json','x-goog-api-key':process.env.GEMINI_API_KEY},
+            signal: AbortSignal.timeout(30000),
+            body: JSON.stringify({contents,systemInstruction:{parts:[{text:systemInstruction}]},generationConfig:{temperature:0.7,maxOutputTokens:4096}})
         });
+        if (!response.ok) throw new Error('Provider rejected request');
+        const data=await response.json();
+        const reply=data.candidates?.[0]?.content?.parts?.map(part=>part.text || '').join('');
+        if (!reply) return res.status(502).json({error:'The AI provider did not return a response'});
+        res.json({ reply });
 
-        res.json({ reply: response.text });
     } catch (error) {
-        console.error('Error generating AI response:', error);
-        res.status(500).json({ error: 'Failed to generate response from Gemini API.' });
+        console.error(JSON.stringify({event:'ai_failure',requestId:req.id}));
+        res.status(502).json({ error: 'Failed to generate response from Gemini API.' });
     }
 });
 

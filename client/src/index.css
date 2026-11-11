@@ -123,3 +123,24 @@ button, a, input { transition: all 0.15s ease; }
   animation: fadeIn 0.15s ease;
   border: 1px solid #45475a;
 }
+
+.welcome-screen { background: radial-gradient(ellipse at 85% 0%, #183448 0%, transparent 48%), #10151e; }
+.welcome-content { max-width: 1040px; margin: auto; padding: clamp(24px, 5vw, 72px); }
+.welcome-content h1 { line-height: 1.15; letter-spacing: -.045em; max-width: 540px; }
+.welcome-content p { max-width: 490px; line-height: 1.8; }
+.welcome-content button { min-height: 100px; border-radius: 14px; }
+.welcome-content button:hover { transform: translateY(-3px); }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+.workspace-bar {display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 22px;background:linear-gradient(110deg,#152330,#111923);border-bottom:1px solid #293447;flex-shrink:0;color:#e2e8f0;font-size:13px}
+.workspace-mark {padding:10px;border:1px solid #365263;border-radius:12px;color:#7dd3fc;background:#1a3441}
+.workspace-subtitle {display:block;color:#94a3b8;font-size:11px;margin-top:3px}
+.workspace-bar button,.project-dialog button {display:inline-flex;align-items:center;gap:8px;padding:9px 12px;border:1px solid #354358;border-radius:8px;font-size:12px;white-space:nowrap}
+.workspace-bar .workspace-primary {background:#a7f3d0;border-color:#a7f3d0;color:#102c25;font-weight:600}
+.workspace-feedback {font-size:11px;max-width:240px;color:#a7f3d0}
+.project-dialog {margin:auto;width:min(850px,94vw);max-height:85vh;padding:32px;border:1px solid #354358;border-radius:20px;background:#101923;color:#e2e8f0;box-shadow:0 30px 100px #0009}
+.project-dialog::backdrop {background:#030812bb;backdrop-filter:blur(8px)}
+.project-dialog header {display:flex;justify-content:space-between;align-items:start;gap:16px}.project-eyebrow {font-size:10px;letter-spacing:.18em;color:#a7f3d0}.project-dialog h2 {font-size:28px;font-weight:600;letter-spacing:-.035em;margin:10px 0}.project-dialog p {font-size:13px;color:#94a3b8;line-height:1.6}
+.project-search {display:flex;align-items:center;gap:12px;margin-top:26px;padding:12px 16px;border:1px solid #354358;border-radius:10px;color:#94a3b8}.project-search input {width:100%;background:transparent;outline:none;color:#e2e8f0;font-size:14px}.project-feedback {font-size:12px;color:#a7f3d0;margin:18px 0}
+.project-grid {display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}.project-grid article {padding:20px;background:#182430;border:1px solid #2c3d4d;border-radius:14px}.project-grid h3 {font-size:17px;margin:18px 0 4px;overflow-wrap:anywhere}.project-grid article p {margin-bottom:22px}.project-empty {padding:42px 12px;text-align:center;display:grid;justify-items:center;gap:12px}.project-empty h3 {font-size:20px}.project-dialog button:hover {background:#294052}.workspace-bar button:disabled,.project-dialog button:disabled {opacity:.5;cursor:wait}
+@media(max-width:700px){.workspace-bar{padding:10px;flex-wrap:wrap}.workspace-subtitle,.workspace-feedback{display:none}.project-dialog{padding:20px}.project-dialog h2{font-size:23px}}
+.sync-status {font-size:11px;white-space:nowrap;border:1px solid #365263;border-radius:20px;padding:5px 10px;color:#a7f3d0;background:#152c2a}

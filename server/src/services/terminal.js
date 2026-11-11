@@ -2,7 +2,7 @@
  * Terminal service - manages WebSocket-based terminal sessions.
  * Uses node-pty when available, falls back to a simple shell emulator.
  */
-const { v4: uuidv4 } = require('uuid');
+const { randomUUID: uuidv4 } = require('node:crypto');
 
 let pty;
 try {
@@ -24,12 +24,13 @@ function handleConnection(ws) {
       cols: 120,
       rows: 30,
       cwd: process.env.HOME || process.env.USERPROFILE || '/',
-      env: process.env
+      env: Object.fromEntries(['PATH','HOME','LANG','TERM'].filter(key=>process.env[key]).map(key=>[key,process.env[key]]))
     });
 
     terminals.set(termId, ptyProcess);
 
     ptyProcess.onData((data) => {
+      if (ws.bufferedAmount > 1048576) { ws.close(1013, 'Terminal output too fast'); return; }
       if (ws.readyState === ws.OPEN) {
         ws.send(JSON.stringify({ type: 'terminal:data', data }));
       }
@@ -45,10 +46,10 @@ function handleConnection(ws) {
     ws.on('message', (raw) => {
       try {
         const msg = JSON.parse(raw);
-        if (msg.type === 'terminal:input') {
+        if (msg.type === 'terminal:input' && typeof msg.data === 'string' && msg.data.length <= 16384) {
           ptyProcess.write(msg.data);
         } else if (msg.type === 'terminal:resize') {
-          ptyProcess.resize(msg.cols || 120, msg.rows || 30);
+          ptyProcess.resize(Math.max(1,Math.min(300,Number(msg.cols)||120)),Math.max(1,Math.min(100,Number(msg.rows)||30)));
         }
       } catch {
         // ignore malformed messages
@@ -70,7 +71,7 @@ function handleConnection(ws) {
     ws.on('message', (raw) => {
       try {
         const msg = JSON.parse(raw);
-        if (msg.type === 'terminal:input') {
+        if (msg.type === 'terminal:input' && typeof msg.data === 'string' && msg.data.length <= 16384) {
           const input = msg.data;
           if (input === '\r' || input === '\n') {
             const cmd = buffer.trim();

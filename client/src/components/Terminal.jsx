@@ -1,6 +1,8 @@
+import '@xterm/xterm/css/xterm.css';
 import React, { useRef, useEffect, useCallback } from 'react';
 
-export default function Terminal() {
+export default function Terminal({ token }) {
+  const generation = useRef(0);
   const termRef = useRef(null);
   const xtermRef = useRef(null);
   const wsRef = useRef(null);
@@ -8,17 +10,13 @@ export default function Terminal() {
   const localRunnerRef = useRef(null);
 
   const connect = useCallback(async () => {
+    const current = ++generation.current;
+    if (wsRef.current) { wsRef.current.close(); wsRef.current = null; }
     // Dynamically import xterm to avoid SSR issues
     const { Terminal: XTerm } = await import('@xterm/xterm');
     const { FitAddon } = await import('@xterm/addon-fit');
 
-    // Load xterm CSS
-    if (!document.querySelector('link[href*="xterm"]')) {
-      const link = document.createElement('link');
-      link.rel = 'stylesheet';
-      link.href = 'https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/css/xterm.min.css';
-      document.head.appendChild(link);
-    }
+    if (current !== generation.current) return;
 
     if (xtermRef.current) {
       xtermRef.current.dispose();
@@ -78,7 +76,14 @@ export default function Terminal() {
     }
 
     try {
-      const ws = new WebSocket(wsUrl);
+      if (!token) throw new Error('Sign in to use the server terminal');
+      const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/socket-ticket`, {method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${token}`},body:JSON.stringify({type:'terminal'})});
+      const grant = await response.json();
+      if (current !== generation.current) return;
+      if (!response.ok) throw new Error(grant.error || 'Terminal access unavailable');
+      const url = new URL(wsUrl); url.searchParams.set('ticket',grant.ticket);
+      const ws = new WebSocket(url);
+
       wsRef.current = ws;
       let connected = false;
 
@@ -112,6 +117,7 @@ export default function Terminal() {
       };
 
       ws.onclose = () => {
+        if (current !== generation.current) return;
         if (connected) {
           term.writeln('\r\n\x1b[90mSession ended. Switching to local mode.\x1b[0m');
           term.writeln('');
@@ -132,13 +138,15 @@ export default function Terminal() {
           ws.send(JSON.stringify({ type: 'terminal:resize', cols, rows }));
         }
       });
-    } catch {
+    } catch (error) {
+      if (current !== generation.current) return;
+      term.writeln(error.message || 'Terminal unavailable');
       term.writeln('\x1b[1;34m☁ Cloud IDE Terminal\x1b[0m');
       term.writeln('\x1b[90mReal terminal unavailable in this deployment. Using local simulation.\x1b[0m');
       term.writeln('');
       localRunnerRef.current = enableLocalMode(term);
     }
-  }, []);
+  }, [token]);
 
   useEffect(() => {
     connect();
@@ -173,6 +181,7 @@ export default function Terminal() {
     if (termRef.current) observer.observe(termRef.current);
 
     return () => {
+      generation.current++;
       window.removeEventListener('resize', handleResize);
       window.removeEventListener('cloud-ide:run-command', handleRunCommand);
       observer.disconnect();

@@ -8,7 +8,11 @@ const router = express.Router();
 // Register
 router.post('/register', async (req, res) => {
   try {
-    const { username, email, password } = req.body;
+    const { username, password } = req.body;
+    const email = typeof req.body.email === 'string' ? req.body.email.trim().toLowerCase() : '';
+    if (typeof username !== 'string' || !username.trim() || username.length > 80 || /[\x00-\x1f]/.test(username + email) || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254 || typeof password !== 'string' || Buffer.byteLength(password) > 72) {
+      return res.status(400).json({ error: 'Provide a valid username, email and password (maximum 72 bytes)' });
+    }
 
     if (!username || !email || !password) {
       return res.status(400).json({ error: 'All fields are required' });
@@ -17,13 +21,13 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ error: 'Password must be at least 8 characters' });
     }
 
-    const existing = store.getUserByEmail(email);
+    const existing = await store.getUserByEmail(email);
     if (existing) {
       return res.status(409).json({ error: 'Email already registered' });
     }
 
     const hashedPassword = await bcrypt.hash(password, 12);
-    const user = store.createUser({ username, email, password: hashedPassword });
+    const user = await store.createUser({ username, email, password: hashedPassword });
 
     const token = generateToken({ id: user.id, email: user.email, username: user.username });
     res.status(201).json({
@@ -31,20 +35,22 @@ router.post('/register', async (req, res) => {
       user: { id: user.id, username: user.username, email: user.email }
     });
   } catch (err) {
-    res.status(500).json({ error: 'Registration failed' });
+    res.status(err.code === '23505' ? 409 : 500).json({ error: err.code === '23505' ? 'Email already registered' : 'Registration failed' });
   }
 });
 
 // Login
 router.post('/login', async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { password } = req.body;
+    const email = typeof req.body.email === 'string' ? req.body.email.trim().toLowerCase() : '';
+    if (typeof password !== 'string' || Buffer.byteLength(password) > 72 || email.length > 254) return res.status(400).json({ error: 'Password must be a string' });
 
     if (!email || !password) {
       return res.status(400).json({ error: 'Email and password required' });
     }
 
-    const user = store.getUserByEmail(email);
+    const user = await store.getUserByEmail(email);
     if (!user) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }

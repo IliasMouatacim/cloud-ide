@@ -274,3 +274,41 @@ All services communicate over a private bridge network (`ide-network`). Data is 
 ## License
 
 MIT
+
+## Verified implementation and Docker development
+
+The Express API supports project creation, listing, lookup and deletion, with JWT authentication and ownership checks on project and file routes. Registration hashes passwords using bcrypt; email addresses are normalized and inputs are checked for type and size. Invalid JSON, oversized requests and unknown API paths return JSON errors with HTTP status codes.
+
+Docker Compose connects the API to **PostgreSQL** for persistent users, projects and files. Local development without `DATABASE_URL` uses an in-memory store. Redis remains an optional infrastructure example, not connected caching. MySQL and SQL Server are not implemented integrations; familiarity with those technologies should be described as separate skills.
+
+Create a root `.env` with a locally generated `JWT_SECRET`, then run `docker compose up --build -d app`. The application serves the built frontend and API on port 3001 and runs as a non-root user with a health check. The Docker build uses the root workspace lockfile. PostgreSQL starts automatically with the app; Compose waits for its health check. Its named volume retains data across container restarts. Use `docker compose --profile infrastructure up -d redis` for the optional Redis service. The sandbox is a separate optional profile and is not wired into terminal execution. The terminal executes on the application host/container, so this project is for trusted local development, not untrusted multi-user hosting.
+
+In managed environments with an HTTPS inspection certificate, build using `docker build --secret id=proxy_ca,src="$CODEX_PROXY_CERT" -t cloud-ide:dev .`. Never disable TLS verification.
+
+### PostgreSQL backend
+
+Set `DATABASE_URL` for direct backend development, for example `postgresql://ide:<password>@localhost:5432/cloud_ide`. Compose configures its database host, user, password and database automatically; change `POSTGRES_PASSWORD` in the root `.env` before the first start. Changing the variable does not rotate a password in an existing database volume. Keep that volume to preserve data; `docker compose down -v` deletes it.
+
+The API initializes the schema idempotently before listening and fails startup if PostgreSQL is unavailable. Production requires `DATABASE_URL`. Health checks query the database and return HTTP 503 on failure. SQL queries use parameters; creating template projects and updating files use transactions. Foreign keys cascade project deletion to files. Existing in-memory data is not migrated automatically.
+
+Run `npm test --workspace=server` for API regression tests. To execute the real PostgreSQL persistence test as well, set `TEST_DATABASE_URL` to a dedicated test database and run the same command. It verifies account login, projects and file content after API restart, template creation, duplicate registration and cascading deletion.
+
+### Cloud project library
+
+Sign in and use **Save cloud copy** to save the current editor workspace as a new project. Each click creates a separate copy and enables autosave for that copy. Opening a cloud project also enables autosave. **My projects** lists your saved work, supports search, and lets you reopen or delete a project. Opening replaces the current editor workspace after confirmation. Names, file edits, renames and deletions sync after a short pause. The status badge shows saving, saved, or unsynced changes. Failed saves can be retried; revision conflicts pause syncing so you can preserve your local edits as a new copy or reopen the remote version.
+
+`POST /api/projects/snapshot` accepts `{name, files}` with up to 200 relative file paths and 1 MB per file (within the API's 10 MB request limit). PostgreSQL commits the project and all files in one transaction. Ownership checks also apply to these saved projects. Use the PostgreSQL configuration for durable storage; development without `DATABASE_URL` remains temporary.
+
+Autosave uses `GET/PUT /api/projects/:id/snapshot` with an integer `revision`. Reads return a consistent project/file snapshot; updates atomically replace the files only if the revision still matches. Competing writes return HTTP 409. Individual file updates also increment the revision. New templates and sign-out detach the cloud project. After a page reload, the local recovery workspace remains available; reopen a cloud project or save a new copy to enable sync again. The browser warns before leaving with pending cloud changes.
+
+### Backend operational boundaries
+
+The persistent server and serverless HTTP adapters share the same Express routes, validation, authentication and PostgreSQL store. Serverless HTTP requires `DATABASE_URL` and a `JWT_SECRET` of at least 32 characters; persistent WebSockets require the Node runtime. Set `CLIENT_URL` to the exact browser origin (comma-separated for multiple origins). Production startup rejects missing database configuration or a short signing secret.
+
+REST responses include `X-Request-ID`; JSON errors include `requestId`. Structured logs record request IDs, methods, statuses and durations without request bodies, credentials or query strings. `/api/live` checks the process; `/api/health` also checks PostgreSQL. SIGTERM drains HTTP requests, closes sockets and releases database connections, with a 10-second shutdown deadline. Pools and SQL queries have bounded timeouts. Schema initialization uses an advisory lock and a version ledger; future schema changes require a new migration version rather than editing an already-applied migration.
+
+HTTP limits are 300 requests/minute/IP, 30 unsuccessful authentication attempts/15 minutes/IP, and 15 AI requests/minute/IP. These limits and single-use socket tickets are process-local. Multi-instance deployment needs a shared limiter/ticket store or sticky routing and coordinated limits. Reverse-proxy trust is intentionally not enabled automatically.
+
+AI requests require authentication. WebSocket upgrades require a 30-second, single-use ticket from authenticated `POST /api/socket-ticket` with `{type, projectId}`; collaboration checks ownership. Sockets have payload, connection, expiry and heartbeat limits. Host terminal access defaults to disabled; `ENABLE_HOST_TERMINAL=true` enables it only for trusted development. It is not a multi-tenant sandbox: an authenticated host shell can still access the container filesystem. Use a separately isolated execution service before hosting untrusted users. Terminal subprocesses no longer inherit the full server environment.
+
+Run `npm test --workspace=server`; set `DATABASE_URL` and `TEST_DATABASE_URL` to a disposable PostgreSQL database for the complete integration suite. GitHub Actions now runs these tests against PostgreSQL and builds the frontend. Gemini provider calls and hosted serverless deployment still require validation with configured external services.
