@@ -20,8 +20,16 @@ import { useAuth } from './hooks/useAuth';
 export default function App() {
   const { user, token, login, register, logout, showAuth, setShowAuth } = useAuth();
   const fs = useFileSystem();
+  const [showHome, setShowHome] = useState(true);
+  const [compact, setCompact] = useState(() => window.innerWidth <= 650);
+  useEffect(() => {
+    const media = window.matchMedia('(max-width: 650px)');
+    const update = () => setCompact(media.matches);
+    media.addEventListener('change', update);
+    return () => media.removeEventListener('change', update);
+  }, []);
   const [showPreview, setShowPreview] = useState(true);
-  const [showTerminal, setShowTerminal] = useState(true);
+  const [showTerminal, setShowTerminal] = useState(false);
   const [devServerPort, setDevServerPort] = useState('');
   const [showGit, setShowGit] = useState(false);
   const [sidebarSection, setSidebarSection] = useState('files'); // files | search | git | extensions | ai
@@ -29,6 +37,7 @@ export default function App() {
   const [isDragOver, setIsDragOver] = useState(false);
 
   const handleRunCode = useCallback(() => {
+    setShowHome(false);
     setShowPreview(true);
     setShowTerminal(true);
 
@@ -102,7 +111,8 @@ export default function App() {
           multiple: false,
         });
         const { path, text } = await readFileHandle(handle);
-        fs.loadFiles({ [path]: text });
+        setShowHome(false);
+      fs.loadFiles({ [path]: text });
       } else {
         // fallback for browsers without File System Access API
         const input = document.createElement('input');
@@ -111,7 +121,8 @@ export default function App() {
           const file = input.files[0];
           if (!file) return;
           const text = await file.text();
-          fs.loadFiles({ [file.name]: text });
+          setShowHome(false);
+      fs.loadFiles({ [file.name]: text });
         };
         input.click();
       }
@@ -128,7 +139,8 @@ export default function App() {
         const dirHandle = await window.showDirectoryPicker();
         const files = await readDirHandle(dirHandle);
         if (Object.keys(files).length > 0) {
-          fs.loadFiles(files, dirHandle.name);
+          setShowHome(false);
+      fs.loadFiles(files, dirHandle.name);
         }
       } else {
         // fallback: use <input webkitdirectory>
@@ -151,7 +163,8 @@ export default function App() {
             if (!input._folderName) input._folderName = folderName;
           }
           if (Object.keys(result).length > 0) {
-            fs.loadFiles(result, input._folderName);
+            setShowHome(false);
+      fs.loadFiles(result, input._folderName);
           }
         };
         input.click();
@@ -223,6 +236,7 @@ export default function App() {
       // Ctrl+` — Toggle Terminal
       if (ctrl && e.key === '`') {
         e.preventDefault();
+        setShowHome(false);
         setShowTerminal(prev => !prev);
       }
       // Ctrl+Enter — Run Code
@@ -287,13 +301,14 @@ export default function App() {
     }
 
     if (Object.keys(newFiles).length > 0) {
+      setShowHome(false);
       fs.loadFiles(newFiles);
     }
   }, [fs]);
 
   return (
     <div
-      className={`h-full flex flex-col bg-ide-bg ${isDragOver ? 'ring-2 ring-inset ring-ide-accent/50' : ''}`}
+      className={`ide-shell h-full flex flex-col bg-ide-bg ${isDragOver ? 'ring-2 ring-inset ring-ide-accent/50' : ''}`}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
@@ -311,19 +326,19 @@ export default function App() {
       {showQuickOpen && (
         <QuickOpen
           files={fs.files}
-          onSelect={(path) => { fs.openFile(path); setShowQuickOpen(false); }}
+          onSelect={(path) => { setShowHome(false); fs.openFile(path); setShowQuickOpen(false); }}
           onClose={() => setShowQuickOpen(false)}
         />
       )}
 
-      <CloudProjects token={token} user={user} workspace={fs} onSignIn={() => setShowAuth(true)} />
+      <CloudProjects onHome={() => setShowHome(true)} onWorkspaceOpen={() => setShowHome(false)} token={token} user={user} workspace={fs} onSignIn={() => setShowAuth(true)} />
       {/* Titlebar */}
       <Titlebar
         user={user}
         onLogin={() => setShowAuth(true)}
         onLogout={logout}
-        onTogglePreview={() => setShowPreview(p => !p)}
-        onToggleTerminal={() => setShowTerminal(p => !p)}
+        onTogglePreview={() => { setShowHome(false); setShowPreview(p => !p); }}
+        onToggleTerminal={() => { setShowHome(false); setShowTerminal(p => !p); }}
         onRun={handleRunCode}
         showPreview={showPreview}
         showTerminal={showTerminal}
@@ -338,9 +353,10 @@ export default function App() {
         onDevServerPortChange={setDevServerPort}
       />
 
+      <div className="mobile-filebar"><label htmlFor="mobile-file">Open file</label><select id="mobile-file" value={fs.activeFile || ''} onChange={event => {fs.openFile(event.target.value);setShowHome(false);}}><option value="" disabled>Choose a file</option>{Object.keys(fs.files).map(path => <option key={path} value={path}>{path}</option>)}</select><button onClick={() => setShowHome(home => !home)}>{showHome ? 'Editor' : 'Home'}</button></div>
       {/* Main content */}
       <ErrorBoundary>
-        <div className="flex-1 flex overflow-hidden">
+        <div className="ide-body flex-1 flex overflow-hidden">
           {/* Activity Bar */}
           <ActivityBar
             section={sidebarSection}
@@ -348,13 +364,13 @@ export default function App() {
             onToggleGit={() => setShowGit(g => !g)}
           />
 
-          <PanelGroup direction="horizontal">
+          <PanelGroup direction={compact ? "vertical" : "horizontal"}>
             {/* Sidebar */}
-            <Panel defaultSize={18} minSize={12} maxSize={35}>
+            <Panel className="explorer-panel" defaultSize={18} minSize={12} maxSize={35}>
               <Sidebar
                 files={fs.files}
                 activeFile={fs.activeFile}
-                onFileSelect={fs.openFile}
+                onFileSelect={path => { setShowHome(false); fs.openFile(path); }}
                 onFileCreate={fs.createFile}
                 onFileDelete={fs.deleteFile}
                 onFileRename={fs.renameFile}
@@ -379,7 +395,8 @@ export default function App() {
             <PanelResizeHandle />
 
             {/* Editor + Terminal */}
-            <Panel defaultSize={showPreview ? 50 : 82} minSize={30}>
+            <Panel className="coding-panel" defaultSize={showPreview && !showHome ? 50 : 82} minSize={30}>
+              {showHome ? <WelcomeTab onNewProject={template => {fs.loadTemplate(template);setShowHome(false);}} onContinue={() => setShowHome(false)} projectName={fs.projectName} /> : <>
               <PanelGroup direction="vertical">
                 <Panel defaultSize={showTerminal ? 70 : 100} minSize={30}>
                   <div className="h-full flex flex-col">
@@ -399,7 +416,7 @@ export default function App() {
                         onCursorChange={fs.setCursorPosition}
                       />
                     ) : (
-                      <WelcomeTab onNewProject={fs.loadTemplate} />
+                      <WelcomeTab onNewProject={template => {fs.loadTemplate(template);setShowHome(false);}} />
                     )}
                   </div>
                 </Panel>
@@ -412,13 +429,14 @@ export default function App() {
                   </>
                 )}
               </PanelGroup>
+              </>}
             </Panel>
 
             {/* Live Preview */}
-            {showPreview && (
+            {showPreview && !showHome && (
               <>
                 <PanelResizeHandle />
-                <Panel defaultSize={32} minSize={15}>
+                <Panel className="preview-panel" defaultSize={32} minSize={15}>
                   <LivePreview files={fs.files} activeFile={fs.activeFile} devServerPort={devServerPort} />
                 </Panel>
               </>
@@ -508,7 +526,7 @@ function ActivityBar({ section, onSectionChange, onToggleGit }) {
   ];
 
   return (
-    <div className="w-12 bg-ide-sidebar flex flex-col items-center pt-2 border-r border-ide-border shrink-0">
+    <div className="activity-rail w-12 bg-ide-sidebar flex flex-col items-center pt-2 border-r border-ide-border shrink-0">
       {items.map(item => {
         const isActive = section === item.id;
         return (

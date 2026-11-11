@@ -34,7 +34,7 @@ export default function EditorTabs({ openFiles, activeFile, onTabSelect, onTabCl
   if (!openFiles || openFiles.length === 0) return null;
 
   return (
-    <div className="flex bg-ide-panel border-b border-ide-border overflow-x-auto shrink-0 scrollbar-thin">
+    <div className="editor-tabs flex bg-ide-panel border-b border-ide-border overflow-x-auto shrink-0 scrollbar-thin">
       {openFiles.map(file => {
         const name = file.split('/').pop();
         const isActive = file === activeFile;
@@ -56,6 +56,7 @@ export default function EditorTabs({ openFiles, activeFile, onTabSelect, onTabCl
               <span className="w-[6px] h-[6px] rounded-full bg-ide-accent ml-0.5" />
             )}
             <button
+              aria-label={`Close ${name}`}
               onClick={(e) => {
                 e.stopPropagation();
                 if (isModified) {

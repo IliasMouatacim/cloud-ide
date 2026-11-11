@@ -29,9 +29,9 @@ export default function Titlebar({
   devServerPort, onDevServerPortChange
 }) {
   return (
-    <div className="h-11 bg-ide-sidebar flex items-center px-3 border-b border-ide-border select-none shrink-0">
+    <div className="editor-toolbar h-11 bg-ide-sidebar flex items-center px-3 border-b border-ide-border select-none shrink-0">
       {/* Logo */}
-      <div className="flex items-center gap-2 mr-4">
+      <div className="toolbar-brand flex items-center gap-2 mr-4">
         <div className="w-5 h-5 rounded-md bg-gradient-accent flex items-center justify-center">
           <Icon d={icons.cloud} size={12} className="text-ide-panel" />
         </div>
@@ -41,7 +41,7 @@ export default function Titlebar({
       </div>
 
       {/* Menu items */}
-      <div className="flex items-center gap-0.5 text-xs text-ide-textMuted">
+      <div className="toolbar-menus flex items-center gap-0.5 text-xs text-ide-textMuted">
         <FileMenu onNewProject={onNewProject} onOpenFile={onOpenFile} onOpenFolder={onOpenFolder} onSave={onSave} onDownload={onDownload} />
         <DropdownMenu label="Edit" items={[
           { label: 'Undo', shortcut: 'Ctrl+Z', action: () => document.execCommand('undo') },
@@ -67,10 +67,11 @@ export default function Titlebar({
       </div>
 
       {/* Project name — centered */}
-      <div className="flex-1 flex justify-center">
+      <div className="toolbar-project flex-1 flex justify-center">
         <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md hover:bg-ide-bg/40 transition-colors group">
           <input
             type="text"
+            aria-label="Project name"
             value={projectName}
             onChange={e => onProjectNameChange(e.target.value)}
             className="bg-transparent text-center text-xs text-ide-textMuted hover:text-ide-text
@@ -82,7 +83,7 @@ export default function Titlebar({
 
       {/* Controls */}
       <div className="flex items-center gap-0.5">
-        <div className="flex items-center mr-3 text-xs">
+        <div className="toolbar-port flex items-center mr-3 text-xs">
           <span className="text-ide-textSubtle mr-1.5">Port:</span>
           <input
             type="text"

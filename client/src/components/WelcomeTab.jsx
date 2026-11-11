@@ -1,133 +1,22 @@
 import React from 'react';
-
-/* ── SVG icons for templates ──────────────────────────────────────── */
-const TplIcon = ({ d, color }) => (
-  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={color}
-       strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-    <path d={d} />
-  </svg>
-);
-
-const TEMPLATES = [
-  {
-    id: 'html', name: 'HTML / CSS / JS', desc: 'The essentials of the web',
-    color: '#e34c26',
-    icon: 'M4 4h16v16H4zM8 8h8M8 12h8M8 16h4',
-  },
-  {
-    id: 'nextjs', name: 'Next.js', desc: 'App Router starter project',
-    color: '#e2e8f0',
-    icon: 'M12 2a10 10 0 100 20 10 10 0 000-20M8 16V8l8 8V8',
-  },
-  {
-    id: 'react', name: 'React', desc: 'React app with JSX components',
-    color: '#61dafb',
-    icon: 'M12 12m-2 0a2 2 0 104 0 2 2 0 10-4 0M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2',
-  },
-  {
-    id: 'node', name: 'Node.js', desc: 'Server with HTTP module',
-    color: '#a6e3a1',
-    icon: 'M18 10h-1.26A8 8 0 109 20h9a5 5 0 000-10zM12 12v4M15 14h-6',
-  },
-  {
-    id: 'python', name: 'Python', desc: 'Python main script',
-    color: '#3776ab',
-    icon: 'M12 2C6.5 2 6 4.5 6 4.5V8h6v1H5s-3-.5-3 4 2.5 4 2.5 4H7v-3s-.2-2.5 2.5-2.5h5s2.3.1 2.3-2.3V4.5S17.5 2 12 2z',
-  },
-  {
-    id: 'blank', name: 'Blank', desc: 'Make room for your next idea',
-    color: '#6c7086',
-    icon: 'M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8zM14 2v6h6',
-  },
+import { ArrowUpRight, ArrowRight, Code2, FileCode2, Box, Hexagon, Braces, Terminal, Sparkles, Command, FolderOpen } from 'lucide-react';
+const templates = [
+  {id:'html',name:'Web essentials',detail:'HTML, CSS & JavaScript',icon:FileCode2,color:'sand'},
+  {id:'react',name:'React',detail:'Components, made simple',icon:Braces,color:'blue'},
+  {id:'nextjs',name:'Next.js',detail:'Your next full-stack idea',icon:Box,color:'ink'},
+  {id:'node',name:'Node.js',detail:'Build something server-side',icon:Hexagon,color:'green'},
+  {id:'python',name:'Python',detail:'Scripts with possibilities',icon:Terminal,color:'lavender'},
+  {id:'blank',name:'Blank canvas',detail:'Start with a clean slate',icon:Code2,color:'gray'},
 ];
-
-const SHORTCUTS = [
-  { keys: ['Ctrl', 'S'], desc: 'Save file' },
-  { keys: ['Ctrl', 'P'], desc: 'Quick open' },
-  { keys: ['Ctrl', '`'], desc: 'Toggle terminal' },
-  { keys: ['Ctrl', 'Enter'], desc: 'Run code' },
-  { keys: ['Ctrl', '/'], desc: 'Toggle comment' },
-  { keys: ['Ctrl', 'Shift', 'F'], desc: 'Search files' },
-];
-
-export default function WelcomeTab({ onNewProject }) {
-  return (
-    <div className="welcome-screen flex-1 overflow-auto animate-fadeIn">
-      <div className="welcome-content">
-        {/* Logo / Title */}
-        <div className="mb-10">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-accent mb-4 shadow-glow">
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#11111b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M18 10h-1.26A8 8 0 109 20h9a5 5 0 000-10z" />
-            </svg>
-          </div>
-          <h1 className="text-4xl font-semibold text-ide-text tracking-tight mb-2">
-            Build something <span className="bg-gradient-to-r from-ide-accent to-ide-accentHover bg-clip-text text-transparent">remarkable.</span>
-          </h1>
-          <p className="text-sm text-ide-textMuted">
-            Your ideas, your workspace. Go from a blank canvas to a live preview without leaving your browser.
-          </p>
-        </div>
-
-        {/* New Project Templates */}
-        <div className="mb-10">
-          <h2 className="text-[11px] font-semibold text-ide-textMuted uppercase tracking-widest mb-3 px-1">
-            Choose your starting point
-          </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
-            {TEMPLATES.map(t => (
-              <button
-                key={t.id}
-                onClick={() => onNewProject(t.id)}
-                className="flex items-center gap-3 p-5 bg-ide-sidebar/70 border border-ide-border/60 rounded-lg
-                           hover:border-ide-accent/40 hover:bg-ide-accent/5 transition-all text-left group
-                           hover:shadow-glow active:scale-[0.98]"
-              >
-                <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
-                     style={{ backgroundColor: t.color + '15' }}>
-                  <TplIcon d={t.icon} color={t.color} />
-                </div>
-                <div className="min-w-0">
-                  <div className="text-[13px] font-semibold text-ide-text group-hover:text-ide-accent transition-colors truncate">
-                    {t.name}
-                  </div>
-                  <div className="text-[11px] text-ide-textMuted truncate">{t.desc}</div>
-                </div>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Keyboard Shortcuts */}
-        <div>
-          <h2 className="text-[11px] font-semibold text-ide-textMuted uppercase tracking-widest mb-3 px-1">
-            Keyboard Shortcuts
-          </h2>
-          <div className="grid grid-cols-2 gap-x-6 gap-y-1.5">
-            {SHORTCUTS.map(s => (
-              <div key={s.keys.join('+')} className="flex items-center justify-between py-1">
-                <span className="text-xs text-ide-textMuted">{s.desc}</span>
-                <div className="flex items-center gap-0.5">
-                  {s.keys.map((k, i) => (
-                    <span key={i}>
-                      <kbd className="text-[10px] px-1.5 py-[2px] bg-ide-sidebar border border-ide-border/80 rounded
-                                      font-mono text-ide-text shadow-[0_1px_0_rgba(0,0,0,0.4)]">
-                        {k}
-                      </kbd>
-                      {i < s.keys.length - 1 && <span className="text-ide-textSubtle text-[9px] mx-0.5">+</span>}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div className="mt-10 text-center text-[10px] text-ide-textSubtle">
-          Powered by Monaco Editor &middot; xterm.js &middot; React
-        </div>
-      </div>
-    </div>
-  );
+export default function WelcomeTab({onNewProject,onContinue,projectName}) {
+ return <main className="studio-home">
+   <div className="home-topline"><span><span className="live-dot"/> YOUR PERSONAL WORKSPACE</span><span className="home-edition">MAKE SOMETHING GOOD.</span></div>
+   <section className="home-hero">
+     <div className="hero-copy"><span className="eyebrow">FROM A LITTLE IDEA</span><h1>Good things<br/>start <em>here.</em></h1><p>A quiet place to write code, try things out, and bring your next idea to life. Everything you need, right in your browser.</p><button className="hero-action" onClick={onContinue || (()=>onNewProject('html'))}>{onContinue ? 'Back to your workspace' : 'Start building'}<ArrowRight size={17}/></button></div>
+     <div className="hero-art" aria-hidden="true"><div className="orbit orbit-one"/><div className="orbit orbit-two"/><div className="art-label"><Sparkles size={14}/> ROOM TO EXPERIMENT</div><div className="code-postcard"><div className="postcard-top"><span/><span/><span/><small>your-next-idea.js</small></div><div className="postcard-code"><span className="code-muted">// A small beginning.</span><br/><span className="code-purple">const</span> idea = {'{'}<br/>&nbsp; curiosity: <span className="code-green">true</span>,<br/>&nbsp; possibilities: <span className="code-gold">'endless'</span><br/>{'}'};<br/><br/><span className="code-green">build</span>(idea);<span className="art-cursor"/></div></div><div className="art-badge"><Code2 size={18}/><span>Less setup.<br/><strong>More making.</strong></span></div></div>
+   </section>
+   {onContinue && <button className="resume-card" onClick={onContinue}><span className="resume-icon"><FolderOpen size={22}/></span><span><small>CONTINUE EXPLORING</small><strong>{projectName || 'Your workspace'}</strong></span><span className="resume-meta">Your local files are right where you left them</span><ArrowUpRight size={20}/></button>}
+   <section className="template-section"><div className="section-heading"><div><span className="eyebrow">A HEAD START</span><h2>What will you make?</h2></div><span>Choose a starting point</span></div><div className="template-grid">{templates.map(({id,name,detail,icon:Icon,color})=><button key={id} className="template-card" onClick={()=>onNewProject(id)}><span className={`template-symbol ${color}`}><Icon size={23}/></span><ArrowUpRight className="template-arrow" size={17}/><strong>{name}</strong><span>{detail}</span></button>)}</div></section>
+   <footer className="home-footer"><span><Command size={14}/> A few shortcuts to keep you in flow</span><span>Quick open <kbd>Ctrl P</kbd></span><span>Save file <kbd>Ctrl S</kbd></span><span>Run <kbd>Ctrl ↵</kbd></span></footer>
+ </main>;
 }

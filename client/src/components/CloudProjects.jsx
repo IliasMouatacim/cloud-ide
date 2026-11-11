@@ -3,7 +3,7 @@ import { useCloudSync } from '../hooks/useCloudSync';
 import { Cloud, ArrowUpRight, FolderOpen, X, Trash2, Search, Plus } from 'lucide-react';
 const API = `${(import.meta.env.VITE_API_URL || '').replace(/\/$/, '')}/api`;
 
-export default function CloudProjects({ token, user, workspace, onSignIn }) {
+export default function CloudProjects({ token, user, workspace, onSignIn, onHome, onWorkspaceOpen }) {
   const sync = useCloudSync(token, workspace);
   const [open, setOpen] = useState(false);
   const [projects, setProjects] = useState([]);
@@ -39,10 +39,10 @@ export default function CloudProjects({ token, user, workspace, onSignIn }) {
   }
   return <>
     <div className="workspace-bar">
-      <div className="flex items-center gap-3"><span className="workspace-mark"><Cloud size={19}/></span><div><strong>Workspace</strong><span className="workspace-subtitle">{user ? `Your creative space, ${user.username}` : 'A little space for your next big idea'}</span></div></div>
-      <div className="flex items-center gap-2"><span className="workspace-feedback" role="status">{sync.error || message || sync.status}</span><span className="sync-status" role="status">{sync.status}</span>{sync.error && <button onClick={sync.retry}>Retry sync</button>}<button onClick={browse} disabled={busy}><FolderOpen size={15}/> My projects</button><button className="workspace-primary" onClick={save} disabled={busy}><Plus size={15}/>{busy ? 'Working…' : 'Save cloud copy'}</button></div>
+      <div className="flex items-center gap-3"><span className="workspace-mark"><Cloud size={19}/></span><div><button className="brand-home" onClick={onHome} aria-label="Workspace home">cloud<span> / </span>ide</button><span className="workspace-subtitle">{user ? `A workspace of your own, ${user.username}` : 'A little space for big ideas'}</span></div></div>
+      <div className="flex items-center gap-2"><span className="workspace-feedback" role="status">{sync.error || message}</span><span className="sync-status" role="status">{sync.status}</span>{sync.error && <button onClick={sync.retry}>Retry sync</button>}<button onClick={browse} disabled={busy}><FolderOpen size={15}/> My projects</button><button className="workspace-primary" onClick={save} disabled={busy}><Plus size={15}/>{busy ? 'Working…' : 'Save cloud copy'}</button></div>
     </div>
-    <dialog ref={dialog} onCancel={() => setOpen(false)} onClose={() => setOpen(false)} className="project-dialog">
+    <dialog ref={dialog} onCancel={() => setOpen(false)} onClose={() => setOpen(false)} aria-label="Your cloud projects" className="project-dialog">
       <header><div><span className="project-eyebrow">YOUR WORKSPACE</span><h2>Pick up where you left off.</h2><p>Saved projects, ready for your next idea.</p></div><button aria-label="Close projects" onClick={() => setOpen(false)}><X size={20}/></button></header>
       <label className="project-search"><Search size={18}/><input autoFocus aria-label="Search projects" placeholder="Find a project…" value={query} onChange={e => setQuery(e.target.value)}/></label>
       <div role="status" className="project-feedback">{message || (busy ? 'Loading…' : `${projects.length} saved projects`)}</div>
@@ -50,7 +50,7 @@ export default function CloudProjects({ token, user, workspace, onSignIn }) {
         <FolderOpen size={25} className="text-ide-accent"/><h3>{project.name}</h3><p>Updated {new Date(project.updatedAt).toLocaleDateString()}</p>
         <div className="flex justify-between"><button disabled={busy} onClick={() => {
           if (!window.confirm('Open this project? Your current workspace will be replaced. Save a cloud copy first if you need it.')) return;
-          run(async valid => { const snapshot = await request(`/projects/${project.id}/snapshot`); if(valid()) { workspace.replaceWorkspace(snapshot.files, snapshot.project.name); sync.attach(snapshot.project, snapshot.files, workspace.workspaceEpoch + 1); setMessage(''); setOpen(false); } });
+          run(async valid => { const snapshot = await request(`/projects/${project.id}/snapshot`); if(valid()) { workspace.replaceWorkspace(snapshot.files, snapshot.project.name); sync.attach(snapshot.project, snapshot.files, workspace.workspaceEpoch + 1); setMessage(''); setOpen(false); onWorkspaceOpen?.(); } });
         }}>Open project <ArrowUpRight size={15}/></button><button aria-label={`Delete ${project.name}`} disabled={busy} onClick={() => {
           if (!window.confirm(`Delete “${project.name}” and its files permanently?`)) return;
           run(async valid => { await request(`/projects/${project.id}`, 'DELETE'); if(valid()) { sync.detach(project.id); setProjects(list => list.filter(p => p.id !== project.id)); } });

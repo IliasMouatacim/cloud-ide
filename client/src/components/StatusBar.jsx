@@ -21,7 +21,7 @@ export default function StatusBar({ activeFile, cursorPosition, fileCount, user 
   const language = LANGUAGE_NAMES[ext] || 'Plain Text';
 
   return (
-    <div className="h-[22px] bg-ide-panel border-t border-ide-border flex items-center px-3 text-[11px]
+    <div className="studio-status h-[22px] bg-ide-panel border-t border-ide-border flex items-center px-3 text-[11px]
                     text-ide-textMuted shrink-0 select-none font-medium">
       {/* Left side */}
       <div className="flex items-center gap-3">
