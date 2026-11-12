@@ -312,3 +312,9 @@ HTTP limits are 300 requests/minute/IP, 30 unsuccessful authentication attempts/
 AI requests require authentication. WebSocket upgrades require a 30-second, single-use ticket from authenticated `POST /api/socket-ticket` with `{type, projectId}`; collaboration checks ownership. Sockets have payload, connection, expiry and heartbeat limits. Host terminal access defaults to disabled; `ENABLE_HOST_TERMINAL=true` enables it only for trusted development. It is not a multi-tenant sandbox: an authenticated host shell can still access the container filesystem. Use a separately isolated execution service before hosting untrusted users. Terminal subprocesses no longer inherit the full server environment.
 
 Run `npm test --workspace=server`; set `DATABASE_URL` and `TEST_DATABASE_URL` to a disposable PostgreSQL database for the complete integration suite. GitHub Actions now runs these tests against PostgreSQL and builds the frontend. Gemini provider calls and hosted serverless deployment still require validation with configured external services.
+
+### Built-in browser preview
+
+The sandboxed preview preserves script types and resolves local JavaScript modules (including dynamic imports), JSX/TSX, CSS side-effect imports, and SVG imports. React and ReactDOM are bundled for previews, so the React starters do not need a CDN. Other npm packages, Node APIs and frameworks such as Next.js still require a running project dev server or a browser-compatible import map.
+
+For preview regressions, run `npm run build`, start `npm run preview --workspace=client`, and run `npm run test:preview --workspace=client` in a second terminal. Install a test browser with `npx playwright install chromium` first; `PREVIEW_URL` and `CHROMIUM_EXECUTABLE_PATH` can select an existing preview server and Chromium executable.

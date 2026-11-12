@@ -1,7 +1,9 @@
+import { buildPreview } from '../utils/preview';
 import React, { useRef, useEffect, useMemo, useState } from 'react';
 
 export default function LivePreview({ files, activeFile, devServerPort }) {
   const iframeRef = useRef(null);
+  const [refresh, setRefresh] = useState(0);
   const [error, setError] = useState(null);
   const [lastUpdate, setLastUpdate] = useState(null);
 
@@ -86,116 +88,12 @@ export default function LivePreview({ files, activeFile, devServerPort }) {
       return '';
     }
 
-    const basePath = htmlPath && htmlPath.includes('/') ? htmlPath.substring(0, htmlPath.lastIndexOf('/')) : '';
-
-    const resolvePath = (relative) => {
-      if (relative.startsWith('http://') || relative.startsWith('https://') || relative.startsWith('//') || relative.startsWith('data:')) {
-        return relative;
-      }
-      if (relative.startsWith('/')) return relative.substring(1);
-
-      const parts = basePath ? basePath.split('/') : [];
-      const relParts = relative.split('/');
-
-      for (const p of relParts) {
-        if (p === '..') {
-          parts.pop();
-        } else if (p !== '.' && p !== '') {
-          parts.push(p);
-        }
-      }
-      return parts.join('/');
-    };
-
-    let html = htmlFile || '';
-
-    // Convert image sources to blob URLs if they reference workspace files
-    html = html.replace(
-      /<img\s+[^>]*src=["']([^"']+)["'][^>]*>/gi,
-      (_match, src) => {
-        if (src.startsWith('http://') || src.startsWith('https://') || src.startsWith('data:') || src.startsWith('blob:')) {
-          return _match;
-        }
-        const resolved = resolvePath(src);
-        const imgContent = files[resolved]; // Text representation of the image
-        if (imgContent !== undefined) {
-          // If the file is stored as raw binary text, we need to convert it, but base64 is better.
-          // In this IDE, since files are text, images will be corrupted unless they are SVG
-          if (resolved.endsWith('.svg')) {
-            const svg64 = btoa(unescape(encodeURIComponent(imgContent)));
-            return _match.replace(src, `data:image/svg+xml;base64,${svg64}`);
-          }
-          // Note: Binary images won't work perfectly due to utf-8 text read, but we will pass it 
-          // as data URI anyway just in case it was encoded or is SVG.
-        }
-        return _match;
-      }
-    );
-
-    // Inline CSS files referenced via <link> tags
-    html = html.replace(
-      /<link\s+[^>]*href=["']([^"']+\.css)["'][^>]*>/gi,
-      (_match, href) => {
-        const resolved = resolvePath(href);
-        const cssContent = files[resolved];
-        if (cssContent !== undefined) {
-          return `<style>/* ${resolved} */\n${cssContent}</style>`;
-        }
-        return _match;
-      }
-    );
-
-    // Inline JS files referenced via <script> tags
-    html = html.replace(
-      /<script\s+[^>]*src=["']([^"']+)["'][^>]*><\/script>/gi,
-      (_match, src) => {
-        // Skip external URLs
-        if (src.startsWith('http://') || src.startsWith('https://') || src.startsWith('//')) {
-          return _match;
-        }
-        const resolved = resolvePath(src);
-        const jsContent = files[resolved];
-        if (jsContent !== undefined) {
-          return `<script>/* ${resolved} */\n${jsContent}<\/script>`;
-        }
-        return _match;
-      }
-    );
-
-    // Inject error catching
-    const errorScript = `<script>
-      window.onerror = function(msg, url, line, col, error) {
-        parent.postMessage({ type: 'preview-error', message: msg, line: line }, '*');
-        return false;
-      };
-      console.log = (function(orig) {
-        return function() {
-          parent.postMessage({ type: 'preview-log', args: Array.from(arguments).map(String) }, '*');
-          orig.apply(console, arguments);
-        };
-      })(console.log);
-      console.error = (function(orig) {
-        return function() {
-          parent.postMessage({ type: 'preview-error', message: Array.from(arguments).map(String).join(' ') }, '*');
-          orig.apply(console, arguments);
-        };
-      })(console.error);
-    <\/script>`;
-
-    // Insert error script right after <head> or at start
-    if (html.includes('<head>')) {
-      html = html.replace('<head>', '<head>' + errorScript);
-    } else {
-      html = errorScript + html;
-    }
-
-    return html;
-  }, [files]);
+    return htmlPath;
+  }, [files, activeFile]);
 
   useEffect(() => {
     const handleMessage = (event) => {
-      // Only accept messages from blob: origins (our own preview iframe)
-      if (event.origin !== 'null' && event.origin !== window.location.origin && !event.origin.startsWith('blob:')) return;
+      if (event.source !== iframeRef.current?.contentWindow) return;
       const data = event.data;
       if (data?.type === 'preview-error') {
         setError(`Line ${data.line || '?'}: ${data.message}`);
@@ -206,19 +104,31 @@ export default function LivePreview({ files, activeFile, devServerPort }) {
   }, []);
 
   useEffect(() => {
-    if (htmlContent === null) return; // Not a web project
-    if (!iframeRef.current) return;
-
+    if (htmlContent === null || devServerPort || !iframeRef.current) return;
+    let cancelled = false;
+    let url;
     setError(null);
-    setLastUpdate(new Date());
-
-    const iframe = iframeRef.current;
-    const blob = new Blob([htmlContent], { type: 'text/html' });
-    const url = URL.createObjectURL(blob);
-    iframe.src = url;
-
-    return () => URL.revokeObjectURL(url);
-  }, [htmlContent]);
+    const reportScript = `
+      window.addEventListener('error', function(event) {
+        parent.postMessage({type:'preview-error',message:event.message || 'A preview resource failed to load',line:event.lineno}, '*');
+      });
+      window.addEventListener('unhandledrejection', function(event) {
+        parent.postMessage({type:'preview-error',message:String(event.reason?.message || event.reason)}, '*');
+      });
+    `;
+    (async () => {
+      try {
+        const html = htmlContent ? await buildPreview(files, htmlContent, reportScript) : '';
+        if (cancelled) return;
+        url = URL.createObjectURL(new Blob([html], {type:'text/html'}));
+        iframeRef.current.src = url;
+        setLastUpdate(new Date());
+      } catch (error) {
+        if (!cancelled) { setError(error.message); iframeRef.current.src = 'about:blank'; }
+      }
+    })();
+    return () => { cancelled = true; if (url) URL.revokeObjectURL(url); };
+  }, [htmlContent, files, devServerPort, refresh]);
 
   if (htmlContent === null && !devServerPort) {
     return (
@@ -272,12 +182,7 @@ export default function LivePreview({ files, activeFile, devServerPort }) {
                   iframeRef.current.src = 'about:blank';
                   setTimeout(() => { if (iframeRef.current) iframeRef.current.src = currentSrc; }, 10);
                 }
-              } else if (iframeRef.current) {
-                const blob = new Blob([htmlContent], { type: 'text/html' });
-                const url = URL.createObjectURL(blob);
-                iframeRef.current.src = url;
-                setLastUpdate(new Date());
-              }
+              } else { setRefresh(value => value + 1); }
             }}
             className="text-ide-textMuted hover:text-ide-text p-1 rounded-md hover:bg-ide-bg/50 transition-colors"
             title="Refresh"

@@ -26,3 +26,11 @@ jobs:
           DATABASE_URL: postgresql://ide:ci-only-password@localhost:5432/cloud_ide_test
           TEST_DATABASE_URL: postgresql://ide:ci-only-password@localhost:5432/cloud_ide_test
       - run: npm run build
+      - run: npx --no-install playwright install --with-deps chromium
+      - name: Preview browser regressions
+        run: |
+          npm run preview --workspace=client -- --host 127.0.0.1 > /tmp/cloud-ide-preview.log 2>&1 &
+          curl --fail --retry 15 --retry-connrefused --retry-delay 1 http://127.0.0.1:4173/
+          npm run test:preview --workspace=client
+        env:
+          PREVIEW_URL: http://127.0.0.1:4173
