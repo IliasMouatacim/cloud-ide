@@ -38,7 +38,7 @@ export async function buildPreview(files, htmlPath, reportScript) {
     if (/\.[jt]sx$|\.ts$/.test(path) || /<[A-Za-z][\w.:-]*(?:\s|\/?>)/.test(source)) {
       babel ||= await import('@babel/standalone');
       const presets = [];
-      if (/\.tsx?$/.test(path)) presets.push(['typescript',{allExtensions:true,isTSX:path.endsWith('.tsx')}]);
+      if (/\.tsx?$/.test(path)) presets.push('typescript');
       presets.push(['react',{runtime:'classic'}]);
       source = babel.transform(source, {filename:path,presets,sourceType:'unambiguous'}).code;
     }
