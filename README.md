@@ -315,6 +315,6 @@ Run `npm test --workspace=server`; set `DATABASE_URL` and `TEST_DATABASE_URL` to
 
 ### Built-in browser preview
 
-The sandboxed preview preserves script types and resolves local JavaScript modules (including dynamic imports), JSX/TSX, CSS side-effect imports, and SVG imports. React and ReactDOM are bundled for previews, so the React starters do not need a CDN. Other npm packages, Node APIs and frameworks such as Next.js still require a running project dev server or a browser-compatible import map.
+The sandboxed preview preserves script types and resolves local JavaScript modules (including dynamic imports), JSX/TSX, CSS side-effect imports, and SVG imports. React, ReactDOM and lucide-react icons are bundled for previews, so these imports do not need a CDN. Other npm packages, Node APIs and frameworks such as Next.js still require a running project dev server or a browser-compatible import map.
 
 For preview regressions, run `npm run build`, start `npm run preview --workspace=client`, and run `npm run test:preview --workspace=client` in a second terminal. Install a test browser with `npx playwright install chromium` first; `PREVIEW_URL` and `CHROMIUM_EXECUTABLE_PATH` can select an existing preview server and Chromium executable.

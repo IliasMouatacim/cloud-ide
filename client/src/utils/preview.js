@@ -2,6 +2,7 @@ import { init, parse } from 'es-module-lexer';
 import reactSource from 'preview-react-source?raw';
 import reactDomSource from 'preview-react-dom-source?raw';
 import React from 'react';
+import lucideSource from 'preview-lucide-source?raw';
 
 const external = value => /^(?:[a-z][a-z\d+.-]*:|\/\/)/i.test(value);
 const dataUrl = (source, type = 'text/javascript') => `data:${type};base64,${btoa(unescape(encodeURIComponent(source)))}`;
@@ -28,6 +29,7 @@ export async function buildPreview(files, htmlPath, reportScript) {
   }
   const imports = { ...userMap };
   imports.react = dataUrl(`const React=globalThis.React;export default React;${Object.keys(React).filter(key=>/^[A-Za-z_$][\w$]*$/.test(key)).map(key=>`export const ${key}=React.${key};`).join('')}`);
+  imports['lucide-react'] = dataUrl(__PREVIEW_LUCIDE_EXPORTS__.filter(key=>/^[A-Za-z_$][\w$]*$/.test(key)).map(key=>`export const ${key}=globalThis.LucideReact.${key};`).join(''));
   imports['react-dom'] = dataUrl('export default globalThis.ReactDOM;export const render=globalThis.ReactDOM.render;export const createRoot=globalThis.ReactDOM.createRoot;');
   imports['react-dom/client'] = imports['react-dom'];
   imports['react/jsx-runtime'] = dataUrl('export const Fragment=globalThis.React.Fragment;export const jsx=(type,props,key)=>globalThis.React.createElement(type,{...props,key});export const jsxs=jsx;');
@@ -51,7 +53,7 @@ export async function buildPreview(files, htmlPath, reportScript) {
         if (!target) throw new Error(`Cannot find "${record.n}" imported by ${path}`);
         replacement = moduleName(target);
       } else if (!Object.hasOwn(imports, record.n)) {
-        throw new Error(`Package "${record.n}" needs a project dev server or an import map. React is supported in the built-in preview.`);
+        throw new Error(`Package "${record.n}" needs a project dev server or an import map. React and lucide-react are supported in the built-in preview.`);
       }
       source = source.slice(0,record.s) + (record.d >= 0 ? JSON.stringify(replacement) : replacement) + source.slice(record.e);
     }
@@ -111,7 +113,7 @@ export async function buildPreview(files, htmlPath, reportScript) {
       script.src=dataUrl(source);if (!script.hasAttribute('async')) script.setAttribute('defer','');
     }
   }
-  const bootstrap=doc.createElement('script');bootstrap.textContent=reportScript+'\n'+reactSource+'\n'+reactDomSource;
+  const bootstrap=doc.createElement('script');bootstrap.textContent=reportScript+'\n'+reactSource+'\n'+reactDomSource+'\nglobalThis.react=globalThis.React;\n'+lucideSource;
   doc.head.prepend(bootstrap);
   const map=doc.createElement('script');map.type='importmap';map.textContent=JSON.stringify({imports:Object.fromEntries(Object.entries(imports).filter(([,value])=>value))});bootstrap.after(map);
   return '<!DOCTYPE html>\n'+doc.documentElement.outerHTML;
