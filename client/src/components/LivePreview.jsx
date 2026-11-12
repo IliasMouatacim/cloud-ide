@@ -193,7 +193,8 @@ export default function LivePreview({ files, activeFile, devServerPort }) {
       </div>
 
       {/* iframe */}
-      <div className="flex-1 bg-white">
+      <div className="flex-1 bg-white relative">
+        {error && <div className="absolute inset-0 z-10 overflow-auto bg-ide-bg p-6 flex flex-col justify-center items-start gap-4" role="alert"><span className="text-xs uppercase tracking-widest text-ide-error">Preview needs attention</span><h3 className="text-lg font-semibold text-ide-text">The project could not finish loading.</h3><p className="text-sm leading-relaxed text-ide-textMuted break-words max-w-full">{error}</p><p className="text-xs leading-relaxed text-ide-textMuted">Browser packages download automatically. Check your connection and package.json versions. Node.js modules and server frameworks need a running project server.</p><button className="rounded-lg px-4 py-2 bg-ide-accent text-white text-xs" onClick={()=>setRefresh(value=>value+1)}>Retry preview</button></div>}
         {devServerPort ? (
           <iframe
             ref={iframeRef}

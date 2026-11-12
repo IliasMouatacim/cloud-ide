@@ -1,3 +1,4 @@
+import { createPackageResolver } from './packages';
 import { init, parse } from 'es-module-lexer';
 import reactSource from 'preview-react-source?raw';
 import reactDomSource from 'preview-react-dom-source?raw';
@@ -34,6 +35,13 @@ export async function buildPreview(files, htmlPath, reportScript) {
   imports['react-dom/client'] = imports['react-dom'];
   imports['react/jsx-runtime'] = dataUrl('export const Fragment=globalThis.React.Fragment;export const jsx=(type,props,key)=>globalThis.React.createElement(type,{...props,key});export const jsxs=jsx;');
 
+  imports['react/jsx-dev-runtime'] = dataUrl('export const Fragment=globalThis.React.Fragment;export const jsxDEV=(type,props,key)=>globalThis.React.createElement(type,{...props,key});');
+  const resolvePackage = createPackageResolver(files, imports, dataUrl);
+  const environment = {MODE:'development',DEV:true,PROD:false,SSR:false,BASE_URL:'/'};
+  for (const name of ['.env','.env.local']) for(const line of (files[name] || '').split('\n')) {
+    const match=line.match(/^\s*(VITE_[A-Z0-9_]+)\s*=\s*(.*?)\s*$/i);
+    if(match) environment[match[1]]=match[2].replace(/^(['"])(.*)\1$/, '$2');
+  }
   const available = path => Object.hasOwn(files,path) ? path : [path+'.js',path+'.jsx',path+'.ts',path+'.tsx',path+'/index.js',path+'/index.jsx'].find(p=>Object.hasOwn(files,p));
   let babel;
   async function transform(source, path) {
@@ -44,23 +52,38 @@ export async function buildPreview(files, htmlPath, reportScript) {
       presets.push(['react',{runtime:'classic'}]);
       source = babel.transform(source, {filename:path,presets,sourceType:'unambiguous'}).code;
     }
-    const records = parse(source)[0].map(record => ({n:record.specifier,s:record.start,e:record.end,d:record.type === 'dynamic' ? 0 : -1}));
+    const records = parse(source)[0].map(record => ({type:record.type,n:record.specifier,s:record.start,e:record.end,d:record.type === 'dynamic' ? 0 : -1}));
     for (const record of [...records].reverse()) {
-      if (!record.n || external(record.n)) continue;
+      if (record.type==='import-meta' && source.slice(record.e,record.e+4)==='.env') {
+        source=source.slice(0,record.s)+'('+JSON.stringify(environment)+')'+source.slice(record.e+4);
+        continue;
+      }
+      if (!record.n) continue;
+      if (record.n.startsWith('node:')) await resolvePackage(record.n);
+      if (external(record.n)) continue;
       let replacement = record.n;
       if (record.n.startsWith('.') || record.n.startsWith('/')) {
         const target = available(resolve(path, record.n));
         if (!target) throw new Error(`Cannot find "${record.n}" imported by ${path}`);
         replacement = moduleName(target);
+        const query=record.n.split('?')[1];
+        if(query==='raw' || query==='url') {
+          replacement+='?'+query;
+          imports[replacement]=dataUrl(`export default ${JSON.stringify(query==='raw' ? files[target] : dataUrl(files[target],target.endsWith('.svg')?'image/svg+xml':'text/plain'))};`);
+        }
+      } else if (record.n.startsWith('@/')) {
+        const target = available('src/' + record.n.slice(2));
+        if (!target) throw new Error(`Cannot find source alias ${record.n}`);
+        replacement = moduleName(target);
       } else if (!Object.hasOwn(imports, record.n)) {
-        throw new Error(`Package "${record.n}" needs a project dev server or an import map. React and lucide-react are supported in the built-in preview.`);
+        replacement = await resolvePackage(record.n);
       }
       source = source.slice(0,record.s) + (record.d >= 0 ? JSON.stringify(replacement) : replacement) + source.slice(record.e);
     }
     return source;
   }
   for (const [path, source] of Object.entries(files)) {
-    if (/\.(?:[cm]?js|jsx|ts|tsx)$/.test(path)) {
+    if (/\.(?:[cm]?js|jsx|ts|tsx|json)$/.test(path)) {
       // Compile only modules reachable from script entries; unrelated server
       // files must not prevent an HTML project from rendering.
       imports[moduleName(path)] = null;
@@ -75,10 +98,11 @@ export async function buildPreview(files, htmlPath, reportScript) {
     const key=moduleName(path);
     if (imports[key] || pending.has(path)) return;
     pending.add(path);
+    if(path.endsWith('.json')) {imports[key]=dataUrl('export default '+JSON.stringify(JSON.parse(files[path]))+';');return;}
     const source=await transform(files[path],path);
     imports[key]=dataUrl(source);
     const [dependencies]=parse(source);
-    for(const dependency of dependencies) if(dependency.specifier?.startsWith('workspace:/')) await compile(dependency.specifier.slice('workspace:/'.length));
+    for(const dependency of dependencies) if(dependency.specifier?.startsWith('workspace:/') && !dependency.specifier.includes('?')) await compile(dependency.specifier.slice('workspace:/'.length));
   }
   for (const link of doc.querySelectorAll('link[rel="stylesheet"][href]')) {
     const href=link.getAttribute('href');
